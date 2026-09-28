@@ -294,10 +294,70 @@ func TestEveryProblemIsReported(t *testing.T) {
 	}
 }
 
+// A value of the wrong type names its entry and key, and does not hide the
+// problems in other entries.
+func TestTypeMistakesNameTheEntry(t *testing.T) {
+	ps := problems(t, `{"schema_version": 1,
+		"player": {"name": {}},
+		"songs": {"Big Daddy": {"bpm": [128]}},
+		"scores": [
+		{"song": "Big Daddy", "chart": "S11", "date": "2026-09-28", "score": "93x"},
+		{"song": "Nemesis", "chart": "S16", "date": "2026-09-28", "score": 1, "note": true},
+		{"song": "Conflict", "chart": "S15", "date": "2026-09-28", "score": 1, "kcal": "31 kcal"},
+		{"song": "DUEL", "chart": "S13", "date": "2026-09-08", "broken": "yes"},
+		{"song": "Vook", "chart": "S12", "date": "2026-09-28", "score": 1, "judgments": {"perfect": 1, "great": [31]}},
+		{"song": "Dignity", "chart": "Q1", "date": "2026-09-28", "score": 1},
+		5,
+		{"score": "93x", "max_combo": 2.5, "song": "Imprinting", "chart": "S11", "date": "2026-09-28"}
+	]}`)
+	want := []string{
+		`player.name: expected text, got a mapping`,
+		`songs: "Big Daddy": bpm: expected text, got a list`,
+		`scores[0] (Big Daddy S11): score: expected a whole number, got "93x"`,
+		`scores[1] (Nemesis S16): note: expected text, got true`,
+		`scores[2] (Conflict S15): kcal: expected a number, got text`,
+		`scores[3] (DUEL S13): broken: expected true or false, got text`,
+		`scores[4] (Vook S12): judgments.great: expected a whole number, got a list`,
+		`scores[5] (Dignity Q1): chart "Q1" is not in a recognised format`,
+		`scores[6]: expected a mapping, got 5`,
+		`scores[7] (Imprinting S11): score: expected a whole number, got "93x"`,
+		`scores[7] (Imprinting S11): max_combo: expected a whole number, got 2.5`,
+	}
+	if len(ps) != len(want) {
+		t.Fatalf("problems = %q, want %d", ps, len(want))
+	}
+	for i := range want {
+		if !strings.HasPrefix(ps[i], want[i]) {
+			t.Errorf("problem %d = %q, want %q", i, ps[i], want[i])
+		}
+	}
+}
+
+func TestUnreadableFiles(t *testing.T) {
+	for doc, want := range map[string]string{
+		"":                                  "the data file is empty",
+		" \n":                               "the data file is empty",
+		`{"schema_version": 1, "scores": [`: "the data file ends in the middle of the JSON document",
+		"{\"schema_version\": 1,\n  \"scores\": [{\"song\": \"Big Daddy\" \"chart\": \"S11\"}]}": `line 2, column 35: invalid character '"' after object key:value pair`,
+		"{\"schema_version\": 1, \"scores\": []}\n}":                                             "line 2, column 1: unexpected data after the end of the JSON document",
+		`{"schema_version": "1", "scores": []}`:                                                  "schema_version: expected a whole number, got text",
+	} {
+		ps := problems(t, doc)
+		if len(ps) != 1 || !strings.HasPrefix(ps[0], want) {
+			t.Errorf("%q: problems = %q, want %q", doc, ps, want)
+		}
+	}
+}
+
 func TestUnknownFieldsAreRejected(t *testing.T) {
 	wantProblem(t, `{"schema_version": 1, "scores": [{
 		"song": "Big Daddy", "chart": "S11", "date": "2026-09-28", "score": 938204, "perfects": 506
-	}]}`, `unknown field "perfects"`)
+	}]}`, `scores[0] (Big Daddy S11): unknown key "perfects" (expected song, chart, date, score, grade, plate, broken, judgments, max_combo, kcal, note)`)
+	wantProblem(t, `{"schema_version": 1, "scores": [{
+		"song": "Big Daddy", "chart": "S11", "date": "2026-09-28", "score": 938204,
+		"judgments": {"perfects": 506, "great": 31, "good": 11, "bad": 7, "miss": 6}
+	}]}`, `scores[0] (Big Daddy S11): judgments: unknown key "perfects" (expected perfect, great, good, bad, miss)`)
+	wantProblem(t, `{"schema_version": 1, "score": []}`, `unknown key "score" (expected schema_version, player, songs, scores)`)
 }
 
 func TestSchemaVersion(t *testing.T) {
