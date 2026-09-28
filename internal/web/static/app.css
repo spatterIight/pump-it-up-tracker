@@ -1187,16 +1187,20 @@ h2 {
   .seg { padding: 0 8px 0 6px; gap: 8px; }
   .seg-btn { padding: 0 12px; font-size: 12px; letter-spacing: 0.06em; }
   .attempts, .graph-card { padding-left: 14px; padding-right: 14px; }
+  /* The score keeps its width; on the narrowest phones a long plate name
+     (Marvelous Game) wraps under the grade instead of running into it. */
   .attempt {
     --slant: 10px;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(min-content, 1fr) auto;
     grid-template-areas: "when grade" "score grade" "judg judg" "extra extra" "note note";
     padding: 10px 20px 12px 22px;
   }
   .a-when { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 0 10px; }
-  .a-grade { flex-direction: column; align-items: flex-end; gap: 4px; padding-right: 4px; }
+  .a-grade { flex-direction: column; align-items: flex-end; gap: 4px; padding-right: 4px; min-width: 0; }
+  .a-grade .plate { white-space: normal; text-align: right; background-size: 100% 1.15em; }
   .a-extra { justify-content: flex-start; text-align: left; }
-  .j-nums { gap: 4px; }
+  /* Columns as wide as their contents, so "Perfect" is not cut off. */
+  .j-nums { grid-template-columns: repeat(5, auto); justify-content: space-between; gap: 4px; }
   .jn i { font-size: 10px; letter-spacing: 0.02em; }
   .jn b { font-size: 16px; }
   .a-grade .grade { font-size: 28px; }
@@ -1239,6 +1243,10 @@ h2 {
   .stat-grid .stat:last-child:nth-child(odd) { grid-column: 1 / -1; }
   .section-head h2::before, .graph-head h2::before, .attempts-title::before { margin-right: 10px; }
   .section-head p { margin-left: 19px; }
+}
+
+@media (max-width: 300px) {
+  .jn i { font-size: 9px; letter-spacing: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
