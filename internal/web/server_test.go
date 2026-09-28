@@ -59,7 +59,7 @@ func TestPages(t *testing.T) {
 		status int
 		want   []string
 	}{
-		{"/", 200, []string{"PUMPITUP", "Latest session", `href="/song/big-daddy"`, "Kasou Shinja 仮装信者", `data-modes="single"`, "Hardest clears"}},
+		{"/", 200, []string{"PUMP IT UP", "Latest session", `href="/song/big-daddy"`, "Kasou Shinja 仮装信者", `data-modes="single"`, "Hardest clears"}},
 		{"/song/big-daddy", 200, []string{"<h1 class=\"display\">Big Daddy</h1>", "938,204", "Talented Game", "graph-svg is-wide", "graph-svg is-narrow", "506", "31.1", "First clear"}},
 		{"/song/nemesis", 200, []string{"Stage break", "died at the drill section", `data-tab="s16"`}},
 		{"/song/destination", 200, []string{"CO-OP x2", "with Sam"}},

@@ -53,7 +53,7 @@ The role writes the variables to a JSON file that this app reads (`schema_versio
 ```json
 {
   "schema_version": 1,
-  "player": { "name": "PUMPITUP" },
+  "player": { "name": "PUMP IT UP" },
   "songs": { "Conflict": { "artist": "Siromaru + Cranky", "bpm": "160", "image": "" } },
   "scores": [ { "song": "Big Daddy", "chart": "S11", "date": "2026-09-28", "score": 938204 } ]
 }
