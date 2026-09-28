@@ -126,4 +126,4 @@ It uses the standard library only. The UI is server-rendered HTML templates with
 
 ## Releasing
 
-Push a tag such as `v0.1.0`. The release workflow publishes `ghcr.io/spatteriight/pump-it-up-tracker:0.1.0` (plus `0.1` and `latest`) for amd64 and arm64. Make sure the package is public in the repository's package settings, so hosts can pull it without logging in.
+Push a tag such as `v0.1.0`. The release workflow publishes `ghcr.io/spatteriight/pump-it-up-tracker:0.1.0` (plus `0.1` and `latest`) for amd64 and arm64.
