@@ -1,0 +1,466 @@
+{
+  "schema_version": 1,
+  "player": {
+    "name": "PUMP IT UP"
+  },
+  "songs": {
+    "Conflict": {
+      "artist": "Siromaru + Cranky",
+      "bpm": "160"
+    },
+    "Nemesis": {
+      "artist": "M2U",
+      "bpm": "160"
+    },
+    "Dignity": {
+      "artist": "Crash",
+      "bpm": "195"
+    },
+    "Rock the house": {
+      "artist": "Matduke",
+      "bpm": "175"
+    }
+  },
+  "scores": [
+    {
+      "song": "Conflict",
+      "chart": "S15",
+      "date": "2026-08-02",
+      "score": 858669,
+      "judgments": {
+        "perfect": 589,
+        "great": 123,
+        "good": 30,
+        "bad": 17,
+        "miss": 21
+      },
+      "max_combo": 523,
+      "plate": "FG"
+    },
+    {
+      "song": "Conflict",
+      "chart": "S15",
+      "date": "2026-08-23",
+      "score": 880430,
+      "judgments": {
+        "perfect": 619,
+        "great": 104,
+        "good": 25,
+        "bad": 14,
+        "miss": 18
+      },
+      "max_combo": 475,
+      "plate": "FG"
+    },
+    {
+      "song": "Conflict",
+      "chart": "S15",
+      "date": "2026-09-13 20:40",
+      "score": 903100,
+      "judgments": {
+        "perfect": 649,
+        "great": 87,
+        "good": 20,
+        "bad": 11,
+        "miss": 13
+      },
+      "max_combo": 330,
+      "plate": "FG"
+    },
+    {
+      "song": "Conflict",
+      "chart": "S15",
+      "date": "2026-09-27 19:05",
+      "score": 912850,
+      "judgments": {
+        "perfect": 664,
+        "great": 74,
+        "good": 19,
+        "bad": 11,
+        "miss": 12
+      },
+      "max_combo": 458,
+      "plate": "FG",
+      "kcal": 34.2
+    },
+    {
+      "song": "Conflict",
+      "chart": "D13",
+      "date": "2026-09-20",
+      "score": 868984,
+      "judgments": {
+        "perfect": 536,
+        "great": 98,
+        "good": 25,
+        "bad": 13,
+        "miss": 18
+      },
+      "max_combo": 301,
+      "plate": "FG"
+    },
+    {
+      "song": "Nemesis",
+      "chart": "S13",
+      "date": "2026-08-02",
+      "score": 892173,
+      "judgments": {
+        "perfect": 439,
+        "great": 65,
+        "good": 17,
+        "bad": 9,
+        "miss": 10
+      },
+      "max_combo": 377,
+      "plate": "TG"
+    },
+    {
+      "song": "Nemesis",
+      "chart": "S13",
+      "date": "2026-08-09",
+      "score": 905533,
+      "judgments": {
+        "perfect": 455,
+        "great": 53,
+        "good": 14,
+        "bad": 8,
+        "miss": 10
+      },
+      "max_combo": 208,
+      "plate": "TG"
+    },
+    {
+      "song": "Nemesis",
+      "chart": "S13",
+      "date": "2026-09-06",
+      "score": 930139,
+      "judgments": {
+        "perfect": 475,
+        "great": 42,
+        "good": 10,
+        "bad": 7,
+        "miss": 6
+      },
+      "max_combo": 378,
+      "plate": "TG"
+    },
+    {
+      "song": "Nemesis",
+      "chart": "S16",
+      "date": "2026-09-13 21:10",
+      "score": 444905,
+      "judgments": {
+        "perfect": 230,
+        "great": 205,
+        "good": 48,
+        "bad": 29,
+        "miss": 308
+      },
+      "max_combo": 230,
+      "broken": true,
+      "note": "died at the drill section"
+    },
+    {
+      "song": "Nemesis",
+      "chart": "S16",
+      "date": "2026-09-27 19:40",
+      "score": 838531,
+      "judgments": {
+        "perfect": 591,
+        "great": 148,
+        "good": 35,
+        "bad": 21,
+        "miss": 25
+      },
+      "max_combo": 428,
+      "plate": "RG",
+      "kcal": 38.9
+    },
+    {
+      "song": "Dignity",
+      "chart": "S12",
+      "date": "2026-08-09",
+      "score": 901619,
+      "judgments": {
+        "perfect": 508,
+        "great": 66,
+        "good": 15,
+        "bad": 8,
+        "miss": 13
+      },
+      "max_combo": 269,
+      "plate": "FG"
+    },
+    {
+      "song": "Dignity",
+      "chart": "S12",
+      "date": "2026-08-23",
+      "score": 897172,
+      "judgments": {
+        "perfect": 501,
+        "great": 71,
+        "good": 17,
+        "bad": 9,
+        "miss": 12
+      },
+      "max_combo": 423,
+      "plate": "FG"
+    },
+    {
+      "song": "Dignity",
+      "chart": "S12",
+      "date": "2026-09-20",
+      "score": 931932,
+      "judgments": {
+        "perfect": 540,
+        "great": 44,
+        "good": 11,
+        "bad": 6,
+        "miss": 9
+      },
+      "max_combo": 425,
+      "plate": "TG"
+    },
+    {
+      "song": "Rock the house",
+      "chart": "S14",
+      "date": "2026-08-23",
+      "score": 862847,
+      "judgments": {
+        "perfect": 534,
+        "great": 106,
+        "good": 26,
+        "bad": 16,
+        "miss": 18
+      },
+      "max_combo": 523,
+      "plate": "FG"
+    },
+    {
+      "song": "Rock the house",
+      "chart": "S14",
+      "date": "2026-09-06",
+      "score": 889622,
+      "judgments": {
+        "perfect": 564,
+        "great": 89,
+        "good": 21,
+        "bad": 13,
+        "miss": 13
+      },
+      "max_combo": 590,
+      "plate": "FG"
+    },
+    {
+      "song": "Rock the house",
+      "chart": "S14",
+      "date": "2026-09-27 20:15",
+      "score": 908578,
+      "judgments": {
+        "perfect": 591,
+        "great": 69,
+        "good": 18,
+        "bad": 10,
+        "miss": 12
+      },
+      "max_combo": 438,
+      "plate": "FG",
+      "kcal": 29.8
+    },
+    {
+      "song": "Vook",
+      "chart": "S10",
+      "date": "2026-08-02",
+      "score": 957330,
+      "judgments": {
+        "perfect": 389,
+        "great": 22,
+        "good": 4,
+        "bad": 2,
+        "miss": 3
+      },
+      "max_combo": 179,
+      "plate": "SG"
+    },
+    {
+      "song": "Vook",
+      "chart": "S10",
+      "date": "2026-09-06",
+      "score": 969192,
+      "judgments": {
+        "perfect": 400,
+        "great": 11,
+        "good": 5,
+        "bad": 2,
+        "miss": 2
+      },
+      "max_combo": 260,
+      "plate": "SG"
+    },
+    {
+      "song": "Vook",
+      "chart": "S12",
+      "date": "2026-09-13 20:05",
+      "score": 907497,
+      "judgments": {
+        "perfect": 472,
+        "great": 56,
+        "good": 14,
+        "bad": 9,
+        "miss": 9
+      },
+      "max_combo": 289,
+      "plate": "TG"
+    },
+    {
+      "song": "Imprinting",
+      "chart": "S11",
+      "date": "2026-08-09",
+      "score": 916804,
+      "judgments": {
+        "perfect": 429,
+        "great": 46,
+        "good": 12,
+        "bad": 6,
+        "miss": 7
+      },
+      "max_combo": 220,
+      "plate": "TG"
+    },
+    {
+      "song": "Imprinting",
+      "chart": "S11",
+      "date": "2026-09-20",
+      "score": 947566,
+      "judgments": {
+        "perfect": 454,
+        "great": 31,
+        "good": 7,
+        "bad": 4,
+        "miss": 4
+      },
+      "max_combo": 351,
+      "plate": "MG"
+    },
+    {
+      "song": "Kasou Shinja 仮装信者",
+      "chart": "S13",
+      "date": "2026-09-06",
+      "score": 884914,
+      "judgments": {
+        "perfect": 487,
+        "great": 81,
+        "good": 19,
+        "bad": 10,
+        "miss": 13
+      },
+      "max_combo": 420,
+      "plate": "FG"
+    },
+    {
+      "song": "Kasou Shinja 仮装信者",
+      "chart": "S13",
+      "date": "2026-09-28 18:20",
+      "score": 897639,
+      "judgments": {
+        "perfect": 503,
+        "great": 68,
+        "good": 16,
+        "bad": 10,
+        "miss": 13
+      },
+      "max_combo": 460,
+      "plate": "FG"
+    },
+    {
+      "song": "Love is a Danger Zone",
+      "chart": "S9",
+      "date": "2026-08-02",
+      "score": 956713,
+      "judgments": {
+        "perfect": 351,
+        "great": 19,
+        "good": 5,
+        "bad": 4,
+        "miss": 1
+      },
+      "max_combo": 314,
+      "plate": "SG"
+    },
+    {
+      "song": "Love is a Danger Zone",
+      "chart": "S9",
+      "date": "2026-08-09",
+      "score": 972582,
+      "judgments": {
+        "perfect": 363,
+        "great": 12,
+        "good": 2,
+        "bad": 1,
+        "miss": 2
+      },
+      "max_combo": 147,
+      "plate": "SG"
+    },
+    {
+      "song": "Destination",
+      "chart": "CoOp2",
+      "date": "2026-09-20",
+      "score": 919600,
+      "judgments": {
+        "perfect": 448,
+        "great": 48,
+        "good": 11,
+        "bad": 6,
+        "miss": 7
+      },
+      "max_combo": 198,
+      "plate": "TG",
+      "note": "with Sam"
+    },
+    {
+      "song": "U Got 2 Know",
+      "chart": "SP12",
+      "date": "2026-09-13",
+      "score": 900188,
+      "judgments": {
+        "perfect": 488,
+        "great": 68,
+        "good": 15,
+        "bad": 9,
+        "miss": 10
+      },
+      "max_combo": 215,
+      "plate": "TG"
+    },
+    {
+      "song": "Big Daddy",
+      "chart": "S11",
+      "date": "2026-08-23",
+      "score": 902311,
+      "plate": "FG"
+    },
+    {
+      "song": "Big Daddy",
+      "chart": "S11",
+      "date": "2026-09-13",
+      "score": 921474,
+      "plate": "TG"
+    },
+    {
+      "song": "Big Daddy",
+      "chart": "S11",
+      "date": "2026-09-28 18:45",
+      "score": 938204,
+      "plate": "TG",
+      "judgments": {
+        "perfect": 506,
+        "great": 31,
+        "good": 11,
+        "bad": 7,
+        "miss": 6
+      },
+      "max_combo": 294,
+      "kcal": 31.137
+    }
+  ]
+}

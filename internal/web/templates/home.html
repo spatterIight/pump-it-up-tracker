@@ -1,0 +1,151 @@
+{{define "content"}}
+{{if not .Songs}}
+<section class="empty-hero">
+  {{padEmblem "empty-mark"}}
+  <h1 class="display">No scores yet</h1>
+  <p class="lede">Add your first result screen to <code>piu_tracker_scores</code> in your Ansible variables and re-run the playbook.</p>
+  <pre class="code"><code>piu_tracker_scores:
+  - song: Big Daddy
+    chart: S11
+    date: 2026-09-28
+    score: 938204
+    plate: TG
+    judgments: {perfect: 506, great: 31, good: 11, bad: 7, miss: 6}
+    max_combo: 294</code></pre>
+</section>
+{{else}}
+<section class="hero">
+  <div class="hero-head">
+    <p class="eyebrow">Pump It Up score journal</p>
+    <h1 class="display">{{if .Player}}{{.Player}}{{else}}Your scores{{end}}</h1>
+    <p class="lede">{{plural .Stats.Plays "play" "plays"}} since {{date .Stats.FirstPlay}} · last played {{ago .Stats.LastPlay}}</p>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat">
+      <span class="stat-label">Plays</span>
+      <span class="stat-value">{{score .Stats.Plays}}</span>
+      <span class="stat-sub">across {{plural .Stats.Charts "chart" "charts"}}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Songs</span>
+      <span class="stat-value">{{score .Stats.Songs}}</span>
+      <span class="stat-sub">in your library</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Hardest clears</span>
+      <span class="stat-value stat-balls">
+        {{if .Stats.HighestSingle}}<span class="ball ball-lg m-single" title="Single {{.Stats.HighestSingle}}">{{.Stats.HighestSingle}}</span>{{end}}
+        {{if .Stats.HighestDouble}}<span class="ball ball-lg m-double" title="Double {{.Stats.HighestDouble}}">{{.Stats.HighestDouble}}</span>{{end}}
+        {{if not (or .Stats.HighestSingle .Stats.HighestDouble)}}—{{end}}
+      </span>
+      <span class="stat-sub">single · double</span>
+    </div>
+    <div class="stat stat-accent">
+      <span class="stat-label">New bests</span>
+      <span class="stat-value">{{.Stats.PBsRecent}}</span>
+      <span class="stat-sub">in the last 30 days</span>
+    </div>
+    {{if ge .Stats.Kcal 0.0}}
+    <div class="stat">
+      <span class="stat-label">Burned</span>
+      <span class="stat-value">{{kcal .Stats.Kcal}}<small>kcal</small></span>
+      <span class="stat-sub">where recorded</span>
+    </div>
+    {{end}}
+  </div>
+
+  {{with .Stats.BestGrades}}
+  <div class="grade-dist">
+    <div class="grade-dist-head">
+      <span class="stat-label">Best grade per chart</span>
+      <span class="muted">{{plural (clearedCharts .) "cleared chart" "cleared charts"}}</span>
+    </div>
+    <div class="grade-bar" role="img" aria-label="Distribution of best grades">
+      {{$total := clearedCharts .}}
+      {{range .}}<span class="gb-seg g-{{gradeClass .Grade}} tier-{{.Grade.Tier}}" style="flex-basis: {{gradeShare .Count $total}}%" title="{{.Grade}}: {{.Count}}"></span>{{end}}
+    </div>
+    <ul class="grade-legend">
+      {{range .}}<li><i class="gb-swatch g-{{gradeClass .Grade}}"></i>{{template "grade" .Grade}}<span>{{.Count}}</span></li>{{end}}
+    </ul>
+  </div>
+  {{end}}
+</section>
+
+{{with .Latest}}
+<section class="section">
+  <div class="section-head">
+    <div>
+      <h2>Latest session</h2>
+      <p class="muted">{{longDate .Date}} · {{plural (len .Plays) "play" "plays"}}{{if .PBs}} · {{plural .PBs "new best" "new bests"}}{{end}}</p>
+    </div>
+    <a class="more" href="{{url "/activity"}}">All activity <span aria-hidden="true">→</span></a>
+  </div>
+  <div class="strip">
+    {{range take 12 (reverse .Plays)}}
+    <a class="mini{{if .IsPB}} is-pb{{end}}{{if .Broken}} is-broken{{end}}" href="{{songURL .Song.Slug}}#{{.Chart.Key}}">
+      <img src="{{artURL .Song.Slug}}" alt="" loading="lazy" width="700" height="393">
+      <span class="mini-shade"></span>
+      <span class="mini-top">{{template "ball" .Chart}}{{if .IsPB}}<span class="tag tag-pb">{{if .FirstClear}}Clear{{else}}PB{{end}}</span>{{end}}</span>
+      <span class="mini-body">
+        <span class="mini-title">{{.Song.Title}}</span>
+        <span class="mini-score">{{score .Score}}{{template "grade" .Grade}}</span>
+      </span>
+    </a>
+    {{end}}
+  </div>
+</section>
+{{end}}
+
+<section class="section" id="songs">
+  <div class="section-head">
+    <div>
+      <h2>Songs</h2>
+      <p class="muted"><span data-count>{{len .Songs}}</span> of {{plural (len .Songs) "song" "songs"}}</p>
+    </div>
+  </div>
+  <div class="toolbar">
+    <label class="search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg>
+      <input type="search" placeholder="Search songs or artists" data-search aria-label="Search songs or artists" autocomplete="off">
+    </label>
+    <div class="chips" role="group" aria-label="Filter by mode">
+      <button type="button" class="chip" aria-pressed="true" data-mode="">All</button>
+      <button type="button" class="chip" aria-pressed="false" data-mode="single"><i class="dot m-single"></i>Single</button>
+      <button type="button" class="chip" aria-pressed="false" data-mode="double"><i class="dot m-double"></i>Double</button>
+      <button type="button" class="chip" aria-pressed="false" data-mode="coop"><i class="dot m-coop"></i>Co-op</button>
+      <button type="button" class="chip" aria-pressed="false" data-mode="perf"><i class="dot m-sp"></i>Performance</button>
+    </div>
+    <label class="sort">
+      <span>Sort</span>
+      <select data-sort aria-label="Sort songs">
+        <option value="recent">Recently played</option>
+        <option value="title">Title</option>
+        <option value="level">Hardest chart</option>
+        <option value="grade">Best grade</option>
+        <option value="plays">Most played</option>
+      </select>
+    </label>
+  </div>
+  <div class="grid" data-grid>
+    {{range .Songs}}
+    <a class="card" href="{{songURL .Slug}}" data-search="{{search .}}" data-title="{{.Title}}" data-modes="{{modes .}}" data-level="{{with .TopChart}}{{.Chart.Level}}{{end}}" data-last="{{unix .LastPlayed}}" data-grade="{{rank .BestGrade}}" data-plays="{{len .Plays}}">
+      <div class="card-art">
+        <span class="frame"><img src="{{artURL .Slug}}" alt="" loading="lazy" width="700" height="393"></span>
+        {{with .BestGrade}}<span class="card-grade">{{template "grade" .}}</span>{{end}}
+      </div>
+      <div class="card-body">
+        <h3 class="card-title">{{.Title}}</h3>
+        {{if .Artist}}<p class="card-artist">{{.Artist}}</p>{{end}}
+        <div class="card-balls">
+          {{range .Charts}}<span class="ball-wrap{{if not .Cleared}} is-uncleared{{end}}" title="{{.Chart}} · best {{score .Best.Score}} {{.Best.Grade}}{{if not .Cleared}} (not cleared){{end}}">{{template "ball" .Chart}}</span>{{end}}
+        </div>
+        <p class="card-meta">{{plural (len .Plays) "play" "plays"}} · {{ago .LastPlayed}}</p>
+      </div>
+    </a>
+    {{end}}
+  </div>
+  <p class="empty-filter" data-empty hidden>No songs match those filters.</p>
+</section>
+{{end}}
+{{end}}

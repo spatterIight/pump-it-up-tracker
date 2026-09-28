@@ -1,0 +1,45 @@
+{{define "content"}}
+<section class="page-head">
+  <p class="eyebrow">Activity</p>
+  <h1 class="display">Sessions</h1>
+  {{if .Days}}<p class="lede">{{plural (len .Days) "day" "days"}} at the cabinet · {{plural .Stats.Plays "play" "plays"}}{{if ge .Stats.Kcal 0.0}} · {{kcal .Stats.Kcal}} kcal{{end}}</p>{{end}}
+</section>
+
+{{range .Days}}
+<section class="day">
+  <header class="day-head">
+    <div class="day-date">
+      <span class="day-num">{{.Date.Day}}</span>
+      <span class="day-rest"><span class="day-dow">{{.Date.Format "Monday"}}</span><span class="day-mon">{{.Date.Format "January 2006"}}</span></span>
+    </div>
+    <div class="day-sum">
+      <span>{{plural (len .Plays) "play" "plays"}}</span>
+      {{if .PBs}}<span class="tag tag-pb">{{plural .PBs "new best" "new bests"}}</span>{{end}}
+      {{if ge .Kcal 0.0}}<span>{{kcal .Kcal}} kcal</span>{{end}}
+    </div>
+  </header>
+  <ol class="play-list">
+    {{range .Plays}}
+    <li>
+      <a class="play-row{{if .IsPB}} is-pb{{end}}{{if .Broken}} is-broken{{end}}" href="{{songURL .Song.Slug}}#{{.Chart.Key}}">
+        <span class="frame play-thumb"><img src="{{artURL .Song.Slug}}" alt="" loading="lazy" width="700" height="393"></span>
+        <span class="play-title">
+          <span class="play-song">{{.Song.Title}}</span>
+          <span class="play-sub">{{.Chart.Mode.Name}} {{.Chart.Ball}}{{if .HasTime}} · {{clock .Date}}{{end}}</span>
+        </span>
+        {{template "ball" .Chart}}
+        <span class="play-score"><span class="play-score-num">{{score .Score}}</span>{{template "delta" .}}</span>
+        <span class="play-grade">{{template "grade" .Grade}}{{template "plate-short" .Plate}}</span>
+      </a>
+    </li>
+    {{end}}
+  </ol>
+</section>
+{{else}}
+<section class="empty-hero">
+  {{padEmblem "empty-mark"}}
+  <h1 class="display">Nothing here yet</h1>
+  <p class="lede">Plays show up here once scores are added.</p>
+</section>
+{{end}}
+{{end}}

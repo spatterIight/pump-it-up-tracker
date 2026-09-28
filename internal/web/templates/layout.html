@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex">
+<title>{{if .Title}}{{.Title}} · {{end}}PIU Tracker{{if .Player}} · {{.Player}}{{end}}</title>
+<link rel="icon" href="{{asset "favicon.svg"}}" type="image/svg+xml">
+<link rel="preload" href="{{asset "fonts/chakra-petch-latin-700-italic.woff2"}}" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="{{asset "app.css"}}">
+<script src="{{asset "init.js"}}"></script>
+<script src="{{asset "app.js"}}" defer></script>
+</head>
+<body>
+<div class="backdrop" aria-hidden="true"></div>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="{{url "/"}}" aria-label="PIU Tracker home">{{padEmblem "brand-mark"}}<span class="brand-word"><b>PIU</b><span>Tracker</span></span></a>
+    <nav class="nav" aria-label="Main">
+      <a href="{{url "/"}}"{{if eq .Nav "songs"}} aria-current="page"{{end}}>Songs</a>
+      <a href="{{url "/activity"}}"{{if eq .Nav "activity"}} aria-current="page"{{end}}>Activity</a>
+    </nav>
+    <div class="topbar-end">
+      {{if .Player}}<span class="player-chip" title="Player"><i aria-hidden="true">1P</i>{{.Player}}</span>{{end}}
+    </div>
+  </div>
+</header>
+<main class="wrap">
+{{template "content" .}}
+</main>
+<footer class="footer wrap">
+  <span>PIU Tracker {{.AppVersion}}</span>
+  <span>Jacket art © Andamiro, found via <a href="https://piuscores.arroweclip.se" rel="noopener">PIU Scores</a> and the <a href="https://pumpitup.fandom.com" rel="noopener">PIU Fandom wiki</a></span>
+</footer>
+<div class="tooltip" role="tooltip" hidden></div>
+</body>
+</html>
