@@ -1,0 +1,9 @@
+{{define "ball"}}<span class="ball m-{{.Mode.Class}}" title="{{.Mode.Name}} {{.Ball}}">{{.Ball}}</span>{{end}}
+
+{{define "grade"}}{{if .}}<span class="grade g-{{gradeClass .}} tier-{{.Tier}}">{{.}}</span>{{end}}{{end}}
+
+{{define "plate"}}{{if .}}<span class="plate plate-{{plateClass .}}" title="{{.Name}}">{{.Name}}</span>{{end}}{{end}}
+
+{{define "plate-short"}}{{if .}}<span class="plate plate-{{plateClass .}} is-short" title="{{.Name}}">{{.}}</span>{{end}}{{end}}
+
+{{define "delta"}}{{if .Broken}}<span class="tag tag-break">Stage break</span>{{else if .FirstClear}}<span class="tag tag-first">First clear</span>{{else if .IsPB}}<span class="delta is-up" title="New personal best">{{signed .Delta}}</span>{{else}}<span class="delta" title="Compared with the personal best at the time">{{signed .Delta}}</span>{{end}}{{end}}

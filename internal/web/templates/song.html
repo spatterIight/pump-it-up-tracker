@@ -1,0 +1,124 @@
+{{define "content"}}
+{{with .Song}}
+<section class="song-hero">
+  <img class="song-hero-bg" src="{{artURL .Slug}}" alt="" aria-hidden="true">
+  <div class="song-hero-inner">
+    <img class="song-hero-art" src="{{artURL .Slug}}" alt="{{.Title}} jacket art" width="700" height="393">
+    <div class="song-hero-text">
+      <a class="back" href="{{url "/"}}"><span aria-hidden="true">←</span> All songs</a>
+      <h1 class="display">{{.Title}}</h1>
+      {{if or .Artist .BPM}}<p class="song-sub">{{.Artist}}{{if and .Artist .BPM}} · {{end}}{{if .BPM}}{{.BPM}} BPM{{end}}</p>{{end}}
+      <dl class="song-facts">
+        <div><dt>Plays</dt><dd>{{len .Plays}}</dd></div>
+        <div><dt>Charts</dt><dd>{{len .Charts}}</dd></div>
+        <div><dt>First played</dt><dd>{{date (index .Plays 0).Date}}</dd></div>
+        <div><dt>Last played</dt><dd>{{ago .LastPlayed}}</dd></div>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<nav class="chart-tabs" role="tablist" aria-label="Charts">
+  {{range $i, $h := .Charts}}
+  <a class="chart-tab{{if eq $i 0}} is-active{{end}}" role="tab" href="#{{.Chart.Key}}" data-tab="{{.Chart.Key}}" aria-selected="{{if eq $i 0}}true{{else}}false{{end}}">
+    {{template "ball" .Chart}}
+    <span class="chart-tab-text">
+      <span class="chart-tab-name">{{.Chart.Mode.Name}} {{.Chart.Ball}}</span>
+      <span class="chart-tab-best">{{template "grade" .Best.Grade}}<span>{{score .Best.Score}}</span></span>
+    </span>
+  </a>
+  {{end}}
+</nav>
+
+{{range $i, $h := .Charts}}
+<section class="chart-panel{{if eq $i 0}} is-active{{end}}" id="{{.Chart.Key}}" data-panel="{{.Chart.Key}}" role="tabpanel" aria-label="{{.Chart}}">
+  <div class="panel-summary">
+    <div class="best-card m-{{.Chart.Mode.Class}}">
+      <span class="stat-label">{{if .Cleared}}Personal best · {{.Chart}}{{else}}Best attempt · {{.Chart}} · not cleared yet{{end}}</span>
+      <div class="best-score">{{score .Best.Score}}</div>
+      <div class="best-meta">{{template "grade" .Best.Grade}}{{template "plate" .BestPlate}}<span class="muted">{{date .Best.Date}}</span></div>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Attempts</span>
+      <span class="stat-value">{{len .Plays}}</span>
+      <span class="stat-sub">{{if .Cleared}}cleared{{else}}not cleared yet{{end}}</span>
+    </div>
+    {{if ge .FewestMisses 0}}
+    <div class="stat">
+      <span class="stat-label">Fewest misses</span>
+      <span class="stat-value">{{.FewestMisses}}</span>
+      <span class="stat-sub">bad + miss</span>
+    </div>
+    {{end}}
+    {{if ge .BestPerfectRate 0.0}}
+    <div class="stat">
+      <span class="stat-label">Best perfect rate</span>
+      <span class="stat-value">{{pct .BestPerfectRate}}</span>
+      <span class="stat-sub">of notes</span>
+    </div>
+    {{end}}
+  </div>
+
+  <div class="graph-card">
+    <div class="graph-head">
+      <h2>Progress</h2>
+      {{if hasJudgments .}}
+      <div class="seg" role="group" aria-label="Plot by">
+        <button type="button" class="seg-btn" aria-pressed="true" data-metric="score">Score</button>
+        <button type="button" class="seg-btn" aria-pressed="false" data-metric="misses">Misses</button>
+        <button type="button" class="seg-btn" aria-pressed="false" data-metric="perfect">Perfect %</button>
+      </div>
+      {{end}}
+    </div>
+    <div class="graph is-active" data-graph="score">{{chart . "score"}}</div>
+    {{if hasJudgments .}}
+    <div class="graph" data-graph="misses">{{chart . "misses"}}</div>
+    <div class="graph" data-graph="perfect">{{chart . "perfect"}}</div>
+    {{end}}
+    <div class="graph-legend">
+      <span><i class="lg lg-line"></i>Each play</span>
+      <span><i class="lg lg-best"></i>Best so far</span>
+      <span><i class="lg lg-pb"></i>New best</span>
+      <span><i class="lg lg-break"></i>Stage break</span>
+    </div>
+  </div>
+
+  <div class="attempts">
+    <h2 class="attempts-title">Attempts <span class="muted">newest first</span></h2>
+    <ol class="attempt-list">
+      {{range reverse .Plays}}
+      <li class="attempt{{if .IsPB}} is-pb{{end}}{{if .Broken}} is-broken{{end}}">
+        <div class="a-when">
+          <span class="a-date">{{date .Date}}</span>
+          {{if .HasTime}}<span class="a-time">{{clock .Date}}</span>{{end}}
+        </div>
+        <div class="a-score">
+          <span class="a-score-num">{{score .Score}}</span>
+          {{template "delta" .}}
+        </div>
+        <div class="a-grade">{{template "grade" .Grade}}{{template "plate" .Plate}}</div>
+        <div class="a-judg">
+          {{with .Judgments}}
+          {{judgmentBar .}}
+          <div class="j-nums">
+            <span class="jn j-perfect"><b>{{.Perfect}}</b><i>Perfect</i></span>
+            <span class="jn j-great"><b>{{.Great}}</b><i>Great</i></span>
+            <span class="jn j-good"><b>{{.Good}}</b><i>Good</i></span>
+            <span class="jn j-bad"><b>{{.Bad}}</b><i>Bad</i></span>
+            <span class="jn j-miss"><b>{{.Miss}}</b><i>Miss</i></span>
+          </div>
+          {{end}}
+        </div>
+        <div class="a-extra">
+          {{if ge .MaxCombo 0}}<span><b>{{.MaxCombo}}</b> max combo</span>{{end}}
+          {{if ge .Kcal 0.0}}<span><b>{{kcal .Kcal}}</b> kcal</span>{{end}}
+        </div>
+        {{if .Note}}<p class="a-note">{{.Note}}</p>{{end}}
+      </li>
+      {{end}}
+    </ol>
+  </div>
+</section>
+{{end}}
+{{end}}
+{{end}}

@@ -1,0 +1,86 @@
+name: CI
+
+on:  # yamllint disable-line rule:truthy
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    # Same-repository pull requests already run via the push event.
+    if: >-
+      github.event_name != 'pull_request'
+      || github.event.pull_request.head.repo.full_name != github.repository
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7.0.0
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Check formatting
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "These files need gofmt:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test -race ./...
+
+      - name: Validate the sample data
+        run: go run ./cmd/pump-it-up-tracker validate sample/tracker.json
+
+  image:
+    name: Build and smoke-test the image
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'pull_request'
+      || github.event.pull_request.head.repo.full_name != github.repository
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7.0.0
+
+      - name: Build
+        run: docker build --build-arg VERSION=ci -t pump-it-up-tracker:ci .
+
+      # Runs the container the way ansible-role-piu-tracker does: read-only root
+      # filesystem, no capabilities, an unprivileged user, and the data file
+      # mounted read-only.
+      - name: Smoke test
+        run: |
+          mkdir -p "$RUNNER_TEMP/data"
+          sudo chown 1000:1000 "$RUNNER_TEMP/data"
+          docker run -d --name piu --user 1000:1000 --cap-drop=ALL --read-only \
+            --tmpfs /tmp:rw,noexec,nosuid \
+            -e PIU_TRACKER_ART_FETCH_ENABLED=false \
+            -p 127.0.0.1:8080:8080 \
+            --mount "type=bind,src=$PWD/sample/tracker.json,dst=/config/tracker.json,readonly" \
+            --mount "type=bind,src=$RUNNER_TEMP/data,dst=/data" \
+            pump-it-up-tracker:ci
+          for i in $(seq 1 30); do
+            status="$(docker inspect -f '{{.State.Health.Status}}' piu)"
+            [ "$status" = healthy ] && break
+            sleep 2
+          done
+          docker logs piu
+          [ "$status" = healthy ] || { echo "container is $status"; exit 1; }
+          curl -fsS http://127.0.0.1:8080/api/data.json | grep -q '"plays": 30'
+          curl -fsS http://127.0.0.1:8080/song/big-daddy | grep -q '938,204'
+
+      - name: Validate data with the image
+        run: |
+          docker run --rm --network=none \
+            --mount "type=bind,src=$PWD/sample/tracker.json,dst=/tmp/tracker.json,readonly" \
+            pump-it-up-tracker:ci validate /tmp/tracker.json
