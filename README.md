@@ -10,9 +10,9 @@ You log each result screen as a few lines of YAML in your Ansible variables. The
 
 ![Home page](docs/screenshots/home.jpg)
 
-| Song page | Activity (light theme) |
+| Song page | Activity |
 | --- | --- |
-| ![Song page](docs/screenshots/song.jpg) | ![Activity page](docs/screenshots/activity-light.jpg) |
+| ![Song page](docs/screenshots/song.jpg) | ![Activity page](docs/screenshots/activity.jpg) |
 
 ## Logging a result screen
 
@@ -118,7 +118,7 @@ The image is a static binary on `distroless/static:nonroot` (about 20 MB). It ru
 go vet ./... && go test ./...
 ```
 
-It uses the standard library only. The UI is server-rendered HTML templates with SVG charts drawn in Go and a little JavaScript for filters, tabs and tooltips; every page also works without JavaScript. The pages make no external requests: the Exo 2 font (SIL OFL, see [`internal/web/static/fonts/OFL.txt`](internal/web/static/fonts/OFL.txt)) and all art are served locally.
+It uses the standard library only. The UI is server-rendered HTML templates with SVG charts drawn in Go and a little JavaScript for filters, tabs and tooltips; every page also works without JavaScript. The pages make no external requests: the Chakra Petch font (SIL OFL, see [`internal/web/static/fonts/OFL-ChakraPetch.txt`](internal/web/static/fonts/OFL-ChakraPetch.txt)) and all art are served locally.
 
 ## Releasing
 

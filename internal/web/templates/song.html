@@ -3,7 +3,7 @@
 <section class="song-hero">
   <img class="song-hero-bg" src="{{artURL .Slug}}" alt="" aria-hidden="true">
   <div class="song-hero-inner">
-    <img class="song-hero-art" src="{{artURL .Slug}}" alt="{{.Title}} jacket art" width="700" height="393">
+    <div class="song-hero-media"><span class="frame"><img class="song-hero-art" src="{{artURL .Slug}}" alt="{{.Title}} jacket art" width="700" height="393"></span></div>
     <div class="song-hero-text">
       <a class="back" href="{{url "/"}}"><span aria-hidden="true">←</span> All songs</a>
       <h1 class="display">{{.Title}}</h1>
@@ -33,10 +33,32 @@
 {{range $i, $h := .Charts}}
 <section class="chart-panel{{if eq $i 0}} is-active{{end}}" id="{{.Chart.Key}}" data-panel="{{.Chart.Key}}" role="tabpanel" aria-label="{{.Chart}}">
   <div class="panel-summary">
-    <div class="best-card m-{{.Chart.Mode.Class}}">
-      <span class="stat-label">{{if .Cleared}}Personal best · {{.Chart}}{{else}}Best attempt · {{.Chart}} · not cleared yet{{end}}</span>
-      <div class="best-score">{{score .Best.Score}}</div>
-      <div class="best-meta">{{template "grade" .Best.Grade}}{{template "plate" .BestPlate}}<span class="muted">{{date .Best.Date}}</span></div>
+    <div class="result m-{{.Chart.Mode.Class}}">
+      <div class="result-head">
+        {{template "ball" .Chart}}
+        <span class="result-title">
+          <span class="stat-label">{{if .Cleared}}Personal best{{else}}Best attempt · not cleared yet{{end}}</span>
+          <span class="result-chart">{{.Chart.Mode.Name}} {{.Chart.Ball}}</span>
+        </span>
+        <span class="result-date">{{date .Best.Date}}</span>
+      </div>
+      <div class="result-body{{if not .Best.Judgments}} no-judg{{end}}">
+        {{with .Best.Judgments}}
+        <ol class="jrows">
+          <li class="jrow j-perfect"><span class="jl">Perfect</span><span class="jc">{{template "count" .Perfect}}</span></li>
+          <li class="jrow j-great"><span class="jl">Great</span><span class="jc">{{template "count" .Great}}</span></li>
+          <li class="jrow j-good"><span class="jl">Good</span><span class="jc">{{template "count" .Good}}</span></li>
+          <li class="jrow j-bad"><span class="jl">Bad</span><span class="jc">{{template "count" .Bad}}</span></li>
+          <li class="jrow j-miss"><span class="jl">Miss</span><span class="jc">{{template "count" .Miss}}</span></li>
+          {{if ge $h.Best.MaxCombo 0}}<li class="jrow j-combo"><span class="jl">Max combo</span><span class="jc">{{template "count" $h.Best.MaxCombo}}</span></li>{{end}}
+        </ol>
+        {{end}}
+        <div class="result-side">
+          <div class="result-grade">{{template "grade" .Best.Grade}}</div>
+          {{template "plate" .BestPlate}}
+          <div class="score-box"><small>Score</small><span>{{score .Best.Score}}</span></div>
+        </div>
+      </div>
     </div>
     <div class="stat">
       <span class="stat-label">Attempts</span>
@@ -99,14 +121,14 @@
         <div class="a-grade">{{template "grade" .Grade}}{{template "plate" .Plate}}</div>
         <div class="a-judg">
           {{with .Judgments}}
-          {{judgmentBar .}}
           <div class="j-nums">
-            <span class="jn j-perfect"><b>{{.Perfect}}</b><i>Perfect</i></span>
-            <span class="jn j-great"><b>{{.Great}}</b><i>Great</i></span>
-            <span class="jn j-good"><b>{{.Good}}</b><i>Good</i></span>
-            <span class="jn j-bad"><b>{{.Bad}}</b><i>Bad</i></span>
-            <span class="jn j-miss"><b>{{.Miss}}</b><i>Miss</i></span>
+            <span class="jn j-perfect"><i>Perfect</i><b>{{template "count" .Perfect}}</b></span>
+            <span class="jn j-great"><i>Great</i><b>{{template "count" .Great}}</b></span>
+            <span class="jn j-good"><i>Good</i><b>{{template "count" .Good}}</b></span>
+            <span class="jn j-bad"><i>Bad</i><b>{{template "count" .Bad}}</b></span>
+            <span class="jn j-miss"><i>Miss</i><b>{{template "count" .Miss}}</b></span>
           </div>
+          {{judgmentBar .}}
           {{end}}
         </div>
         <div class="a-extra">

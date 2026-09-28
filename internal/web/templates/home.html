@@ -131,7 +131,7 @@
     {{range .Songs}}
     <a class="card" href="{{songURL .Slug}}" data-search="{{search .}}" data-title="{{.Title}}" data-modes="{{modes .}}" data-level="{{with .TopChart}}{{.Chart.Level}}{{end}}" data-last="{{unix .LastPlayed}}" data-grade="{{rank .BestGrade}}" data-plays="{{len .Plays}}">
       <div class="card-art">
-        <img src="{{artURL .Slug}}" alt="" loading="lazy" width="700" height="393">
+        <span class="frame"><img src="{{artURL .Slug}}" alt="" loading="lazy" width="700" height="393"></span>
         {{with .BestGrade}}<span class="card-grade">{{template "grade" .}}</span>{{end}}
       </div>
       <div class="card-body">

@@ -44,7 +44,7 @@ func Placeholder(title string) []byte {
 		`<stop offset="1" stop-color="hsl(%d 100%% 70%%)" stop-opacity="0"/></radialGradient></defs>`, hue1, hue2, hue2, hue2)
 	fmt.Fprintf(&b, `<rect width="%d" height="%d" fill="url(#bg)"/><rect width="%d" height="%d" fill="url(#glow)"/>`, Width, Height, Width, Height)
 	b.WriteString(padEmblem(`transform="translate(470 150) scale(2.6) rotate(-12 50 50)"`, 0.13))
-	b.WriteString(`<g font-family="'Exo 2', 'Segoe UI', system-ui, sans-serif" font-weight="800" font-style="italic" fill="#fff" text-anchor="middle">`)
+	b.WriteString(`<g font-family="'Chakra Petch', 'Segoe UI', system-ui, sans-serif" font-weight="800" font-style="italic" fill="#fff" text-anchor="middle">`)
 	for i, l := range lines {
 		fmt.Fprintf(&b, `<text x="%d" y="%.1f" font-size="%d" letter-spacing="1">%s</text>`, Width/2, top+float64(i)*lineHeight, size, html.EscapeString(l))
 	}

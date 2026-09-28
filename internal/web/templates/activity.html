@@ -22,7 +22,7 @@
     {{range .Plays}}
     <li>
       <a class="play-row{{if .IsPB}} is-pb{{end}}{{if .Broken}} is-broken{{end}}" href="{{songURL .Song.Slug}}#{{.Chart.Key}}">
-        <img class="play-thumb" src="{{artURL .Song.Slug}}" alt="" loading="lazy" width="700" height="393">
+        <span class="frame play-thumb"><img src="{{artURL .Song.Slug}}" alt="" loading="lazy" width="700" height="393"></span>
         <span class="play-title">
           <span class="play-song">{{.Song.Title}}</span>
           <span class="play-sub">{{.Chart.Mode.Name}} {{.Chart.Ball}}{{if .HasTime}} · {{clock .Date}}{{end}}</span>
