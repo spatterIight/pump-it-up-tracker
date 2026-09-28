@@ -69,36 +69,6 @@
   color-scheme: dark;
 }
 
-/* The "light" theme is the cabinet with the house lights up: the same HUD on a brighter blue stage. */
-:root[data-theme="light"] {
-  --bg-0: #0a2c6e;
-  --bg-1: #1a5cc4;
-  --panel: linear-gradient(180deg, rgba(22, 78, 170, 0.86) 0%, rgba(12, 52, 130, 0.88) 55%, rgba(10, 44, 112, 0.9) 100%);
-  --bar: linear-gradient(90deg, rgba(90, 170, 255, 0.42) 0%, rgba(60, 140, 240, 0.26) 45%, rgba(40, 110, 220, 0.12) 100%);
-  --well: #03102c;
-  --text-2: #c4dcf6;
-  --text-3: #8fb6e2;
-  --edge: rgba(120, 230, 255, 0.6);
-  --edge-dim: rgba(120, 230, 255, 0.34);
-  --line: rgba(160, 215, 255, 0.2);
-  --line-2: rgba(160, 215, 255, 0.34);
-}
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme]) {
-    --bg-0: #0a2c6e;
-    --bg-1: #1a5cc4;
-    --panel: linear-gradient(180deg, rgba(22, 78, 170, 0.86) 0%, rgba(12, 52, 130, 0.88) 55%, rgba(10, 44, 112, 0.9) 100%);
-    --bar: linear-gradient(90deg, rgba(90, 170, 255, 0.42) 0%, rgba(60, 140, 240, 0.26) 45%, rgba(40, 110, 220, 0.12) 100%);
-    --well: #03102c;
-    --text-2: #c4dcf6;
-    --text-3: #8fb6e2;
-    --edge: rgba(120, 230, 255, 0.6);
-    --edge-dim: rgba(120, 230, 255, 0.34);
-    --line: rgba(160, 215, 255, 0.2);
-    --line-2: rgba(160, 215, 255, 0.34);
-  }
-}
-
 *, *::before, *::after { box-sizing: border-box; }
 
 [hidden] { display: none !important; }
@@ -212,11 +182,11 @@ code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospac
 }
 
 /* Parallelogram controls: a skewed ::before carries border, fill and glow; the text stays upright. */
-.nav a, .player-chip, .theme-toggle, .eyebrow, .chip, .sort, .seg-btn, .chart-tab, .back, .more, .button, .day-num {
+.nav a, .player-chip, .eyebrow, .chip, .sort, .seg-btn, .chart-tab, .back, .more, .button, .day-num {
   position: relative;
   isolation: isolate;
 }
-.nav a::before, .player-chip::before, .theme-toggle::before, .eyebrow::before, .chip::before, .sort::before,
+.nav a::before, .player-chip::before, .eyebrow::before, .chip::before, .sort::before,
 .seg-btn::before, .chart-tab::before, .back::before, .more::before, .button::before, .day-num::before {
   content: "";
   position: absolute;
@@ -321,26 +291,6 @@ code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospac
   background: var(--cyan);
   clip-path: polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%);
 }
-.theme-toggle {
-  width: 40px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  background: none;
-  cursor: pointer;
-}
-.theme-toggle:hover::before { border-color: var(--cyan); }
-.theme-toggle svg { width: 17px; height: 17px; fill: none; stroke: var(--cyan); stroke-width: 1.8; stroke-linecap: round; }
-.theme-toggle .icon-moon { fill: var(--cyan); stroke: none; }
-.icon-sun { display: none; }
-:root[data-theme="light"] .icon-sun { display: block; }
-:root[data-theme="light"] .icon-moon { display: none; }
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme]) .icon-sun { display: block; }
-  :root:not([data-theme]) .icon-moon { display: none; }
-}
-
 /* ---------- Type ---------- */
 
 .display {

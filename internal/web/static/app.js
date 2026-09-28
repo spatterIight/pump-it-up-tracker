@@ -2,8 +2,6 @@
 (function () {
   "use strict";
 
-  var root = document.documentElement;
-
   function each(list, fn) {
     Array.prototype.forEach.call(list, fn);
   }
@@ -15,19 +13,6 @@
     } catch (e) {
       return null;
     }
-  }
-
-  // ---- Theme ----------------------------------------------------------------
-
-  var toggle = document.querySelector(".theme-toggle");
-  if (toggle) {
-    toggle.addEventListener("click", function () {
-      var current = root.dataset.theme ||
-        (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
-      var next = current === "light" ? "dark" : "light";
-      root.dataset.theme = next;
-      store("piu-theme", next);
-    });
   }
 
   // ---- Song library: search, mode filter, sort --------------------------------
