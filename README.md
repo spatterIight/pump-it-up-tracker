@@ -14,8 +14,6 @@ You log each result screen as a few lines of YAML in your Ansible variables. The
 | --- | --- |
 | ![Song page](docs/screenshots/song.jpg) | ![Activity page](docs/screenshots/activity-light.jpg) |
 
-The screenshots show the generated placeholder art. With art fetching on, the real jackets appear instead.
-
 ## Logging a result screen
 
 This is what one play looks like in the Ansible variables, taken from a real result screen:
@@ -42,8 +40,6 @@ Every entry is checked before it is shown. A deploy with a mistake in it fails a
 - **Score against judgments.** When the judgments and max combo are both given, the score must match what the game would award for them:
 
   `1,000,000 × (0.995 × (Perfect + 0.6·Great + 0.2·Good + 0.1·Bad) + 0.005 × MaxCombo) / Notes`
-
-  The Big Daddy screen above gives exactly 938,204.
 - **Grade against score.** A `grade`, if given, must match the Phoenix grade table. Grades are worked out from the score otherwise.
 - **Everything else:** chart notation, dates, plate names, and unknown keys (such as `perfects:`) are rejected with an explanation.
 
@@ -75,7 +71,7 @@ For each song, art is looked up in this order and downloaded once into the data 
 4. **The [PIU Fandom wiki](https://pumpitup.fandom.com):** the lead image of the song's page.
 5. **A generated placeholder** (gradient + title), until something is found.
 
-Songs with no art found are looked up again after a week, or straight away when their `image` changes. Network errors are not remembered, so they are simply retried on the next start. Jacket art is © Andamiro, so it is only ever cached on your server and never committed here or baked into the image.
+Songs with no art found are looked up again after a week, or straight away when their `image` changes. Network errors are not remembered, so they are simply retried on the next start. Jacket art is © Andamiro: the app only caches it on your server and never bakes it into the image.
 
 ## Configuration
 
