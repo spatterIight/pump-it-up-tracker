@@ -1170,19 +1170,33 @@ h2 {
   .day-date { gap: 14px; padding-left: 4px; }
   .day-num { font-size: 28px; min-width: 56px; }
   .day-sum { margin-right: 0; flex-wrap: wrap; }
+  /* The title gets the full width; the level ball sits on the jacket's corner
+     and the plate under the grade, so a wide grade such as AAA+ never has to
+     share a line with the score. */
   .play-row {
-    grid-template-columns: 76px minmax(0, 1fr) auto;
-    grid-template-areas: "thumb title ball" "thumb score grade";
-    gap: 4px 12px;
-    padding: 8px 18px 8px 18px;
+    grid-template-columns: clamp(60px, 19vw, 76px) minmax(0, 1fr) auto;
+    grid-template-areas: "thumb title title" "thumb score grade";
+    gap: 6px 12px;
+    padding: 10px 18px 10px 20px;
   }
   .play-row { --slant: 8px; }
-  .play-thumb { grid-area: thumb; width: 76px; --cut: 6px; }
+  .play-thumb { grid-area: thumb; width: 100%; --cut: 6px; }
   .play-title { grid-area: title; }
-  .play-row > .ball { grid-area: ball; justify-self: end; }
-  .play-score { grid-area: score; align-items: flex-start; gap: 2px; }
-  .play-score-num { font-size: 16px; padding: 0 8px; }
-  .play-grade { grid-area: grade; gap: 8px; }
+  .play-song { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+  .play-row > .ball {
+    grid-area: thumb;
+    align-self: start;
+    justify-self: start;
+    position: relative;
+    z-index: 1;
+    width: 24px;
+    height: 24px;
+    margin: -8px 0 0 -8px;
+    font-size: 11px;
+  }
+  .play-score { grid-area: score; align-items: flex-start; gap: 3px; min-width: 0; }
+  .play-score-num { font-size: 16px; padding: 0 8px; min-width: 0; }
+  .play-grade { grid-area: grade; flex-direction: column; align-items: flex-end; gap: 2px; }
   .play-grade .grade { font-size: 22px; }
   .section-head { flex-wrap: wrap; }
   h2 { font-size: 19px; letter-spacing: 0.05em; white-space: nowrap; }
