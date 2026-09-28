@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -80,25 +81,63 @@ type chartPoint struct {
 	failed bool
 }
 
-// renderChart plots a chart history by the named metric as SVG.
-func renderChart(h *tracker.ChartHistory, key string) template.HTML {
+// series is the plays one chart plots, drawn as one line.
+type series struct {
+	// id makes the chart's element IDs unique on the page.
+	id string
+	// label names what is plotted, for screen readers.
+	label string
+	plays []*tracker.Play
+	// scoring is the scoring system of every play when the chart plots
+	// scores, for grade lines and the score range.
+	scoring tracker.ScoringSystem
+}
+
+// renderChart plots a chart lineage by the named metric as SVG. Misses and
+// perfect rates do not depend on the scoring system, so one line spans the
+// whole lineage. Scores of different scoring systems do not compare, so the
+// score chart of a lineage that spans more than one is drawn in parts, one
+// per record, each headed by the charts and versions it covers.
+func renderChart(lin *tracker.Lineage, key string) template.HTML {
 	m, ok := metrics[key]
 	if !ok {
 		return ""
 	}
+	base := "g-" + lin.Key() + "-" + m.key
 	var out strings.Builder
+	if m.grades && len(lin.Records) > 1 {
+		for i, r := range lin.Records {
+			fmt.Fprintf(&out, `<div class="graph-part"><p class="graph-part-head">%s</p>`, template.HTMLEscapeString(chartsLabel(r.Charts)))
+			sr := series{id: fmt.Sprintf("%s-%d", base, i), label: chartsLabel(r.Charts), plays: r.Plays, scoring: r.Scoring}
+			for _, l := range layouts {
+				out.WriteString(renderLayout(sr, m, l))
+			}
+			out.WriteString(`</div>`)
+		}
+		return template.HTML(out.String())
+	}
+	sr := series{id: base, label: chartsLabel(lin.Charts), plays: lin.Plays, scoring: lin.Record().Scoring}
 	for _, l := range layouts {
-		out.WriteString(renderLayout(h, m, l))
+		out.WriteString(renderLayout(sr, m, l))
 	}
 	return template.HTML(out.String())
 }
 
-func renderLayout(h *tracker.ChartHistory, m metric, l layout) string {
+// chartsLabel names charts with their versions: "S7 (Prime 2) → S8 (Phoenix)".
+func chartsLabel(hs []*tracker.ChartHistory) string {
+	parts := make([]string, len(hs))
+	for i, h := range hs {
+		parts[i] = h.Chart.String() + " (" + h.Version.Name + ")"
+	}
+	return strings.Join(parts, " → ")
+}
+
+func renderLayout(sr series, m metric, l layout) string {
 	// slots are the plays along the x axis, in order: pts those with a
 	// value, fails those without a result.
 	var slots, pts, fails []*chartPoint
 	best, haveBest := 0.0, false
-	for _, p := range h.Plays {
+	for _, p := range sr.plays {
 		if !p.HasScore() {
 			cp := &chartPoint{play: p, failed: true}
 			slots = append(slots, cp)
@@ -127,8 +166,9 @@ func renderLayout(h *tracker.ChartHistory, m metric, l layout) string {
 	bottom := l.padT + plotH
 	lo, hi := 0.0, 1.0
 	if len(pts) > 0 {
-		lo, hi = domain(m, pts)
+		lo, hi = domain(m, pts, sr.scoring)
 	}
+	gradeLines := m.grades && sr.scoring.GradeThresholds() != nil
 	yOf := func(v float64) float64 { return l.padT + (1-(v-lo)/(hi-lo))*plotH }
 	for i, p := range slots {
 		if len(slots) == 1 {
@@ -143,10 +183,10 @@ func renderLayout(h *tracker.ChartHistory, m metric, l layout) string {
 		}
 	}
 
-	id := "g-" + h.Chart.Key() + "-" + m.key + "-" + l.name
+	id := sr.id + "-" + l.name
 	var b strings.Builder
 	fmt.Fprintf(&b, `<svg class="graph-svg is-%s" viewBox="0 0 %g %g" role="img" aria-label="%s history for %s">`,
-		l.name, l.w, l.h, template.HTMLEscapeString(m.label), template.HTMLEscapeString(h.Chart.String()))
+		l.name, l.w, l.h, template.HTMLEscapeString(m.label), template.HTMLEscapeString(sr.label))
 	fmt.Fprintf(&b, `<defs><linearGradient id="%s-line" x1="0" x2="1" y1="0" y2="0"><stop offset="0" class="stop-a"/><stop offset="1" class="stop-b"/></linearGradient>`+
 		`<linearGradient id="%s-area" x1="0" x2="0" y1="0" y2="1"><stop offset="0" class="stop-area"/><stop offset="1" class="stop-area-end"/></linearGradient></defs>`, id, id)
 
@@ -156,18 +196,19 @@ func renderLayout(h *tracker.ChartHistory, m metric, l layout) string {
 		// Only fails: there is nothing to put on a y axis.
 		fmt.Fprintf(&b, `<text class="g-empty" x="%g" y="%g" text-anchor="middle">Not cleared yet</text>`, l.padL+plotW/2, l.padT+plotH/2+6)
 	} else {
-		if m.grades {
-			writeGradeBands(&b, l, lo, hi, yOf)
+		if gradeLines {
+			writeGradeBands(&b, l, sr.scoring.GradeThresholds(), lo, hi, yOf)
 		}
 		for _, t := range ticks(lo, hi, 4) {
 			y := yOf(t)
-			if !m.grades {
+			if !gradeLines {
 				fmt.Fprintf(&b, `<line class="g-grid" x1="%g" x2="%g" y1="%.1f" y2="%.1f"/>`, l.padL, l.padL+plotW, y, y)
 			}
 			fmt.Fprintf(&b, `<text class="g-axis" x="%g" y="%.1f" text-anchor="end">%s</text>`, l.padL-8, y+4.5, m.axis(t))
 		}
 	}
 	writeDates(&b, l, slots)
+	writeVersions(&b, l, slots)
 
 	if len(pts) > 1 {
 		var area, line strings.Builder
@@ -215,7 +256,7 @@ func renderLayout(h *tracker.ChartHistory, m metric, l layout) string {
 	return b.String()
 }
 
-func domain(m metric, pts []*chartPoint) (lo, hi float64) {
+func domain(m metric, pts []*chartPoint, sys tracker.ScoringSystem) (lo, hi float64) {
 	lo, hi = math.Inf(1), math.Inf(-1)
 	for _, p := range pts {
 		lo, hi = math.Min(lo, p.v), math.Max(hi, p.v)
@@ -228,8 +269,8 @@ func domain(m metric, pts []*chartPoint) (lo, hi float64) {
 			mid := (hi + lo) / 2
 			lo, hi = mid-10000, mid+10000
 		}
-		if hi > tracker.MaxScore {
-			lo, hi = lo-(hi-tracker.MaxScore), tracker.MaxScore
+		if top := float64(sys.MaxScore()); top > 0 && hi > top {
+			lo, hi = lo-(hi-top), top
 		}
 		lo = math.Max(0, lo)
 	case "misses":
@@ -265,9 +306,8 @@ func ticks(lo, hi float64, n int) []float64 {
 	return out
 }
 
-func writeGradeBands(b *strings.Builder, l layout, lo, hi float64, yOf func(float64) float64) {
+func writeGradeBands(b *strings.Builder, l layout, thresholds []tracker.GradeThreshold, lo, hi float64, yOf func(float64) float64) {
 	lastLabel := math.Inf(-1)
-	thresholds := tracker.GradeThresholds()
 	for i, t := range thresholds {
 		floor := float64(t.Min)
 		if floor <= lo || floor > hi {
@@ -310,6 +350,33 @@ func writeDates(b *strings.Builder, l layout, pts []*chartPoint) {
 	}
 }
 
+// writeVersions marks where a lineage's plays move to another chart: a
+// dashed line between them, and the chart and version named at the top of
+// each stretch. Plays of a single chart get no marks.
+func writeVersions(b *strings.Builder, l layout, pts []*chartPoint) {
+	if !slices.ContainsFunc(pts, func(p *chartPoint) bool { return p.play.History != pts[0].play.History }) {
+		return
+	}
+	lastX := math.Inf(-1)
+	for i, p := range pts {
+		h := p.play.History
+		if i > 0 && h == pts[i-1].play.History {
+			continue
+		}
+		x := l.padL + 8
+		if i > 0 {
+			mid := (pts[i-1].x + p.x) / 2
+			fmt.Fprintf(b, `<line class="g-version" x1="%.1f" x2="%.1f" y1="%g" y2="%g"/>`, mid, mid, l.padT, l.padT+l.plotH())
+			x = mid + 6
+		}
+		if x-lastX >= l.labelGap {
+			fmt.Fprintf(b, `<text class="g-version-label" x="%.1f" y="%g">%s · %s</text>`,
+				x, l.padT+16, template.HTMLEscapeString(h.Chart.String()), template.HTMLEscapeString(h.Version.Name))
+			lastX = x
+		}
+	}
+}
+
 // bestStep traces the best value so far as a step line.
 func bestStep(m metric, pts []*chartPoint, yOf func(float64) float64) string {
 	var d strings.Builder
@@ -341,13 +408,20 @@ func tooltip(m metric, p *chartPoint) []string {
 	if play.HasTime {
 		when += " · " + play.Date.Format("15:04")
 	}
+	if play.History.Lineage.Linked() {
+		when += " · " + play.Chart.String() + " " + play.Version.Name
+	}
 	lines := []string{when}
 	if !play.HasScore() {
 		return append(lines, "Failed")
 	}
 	switch m.key {
 	case "score":
-		lines = append(lines, formatInt(play.Score)+" · "+string(play.Grade))
+		if play.Grade != "" {
+			lines = append(lines, formatInt(play.Score)+" · "+string(play.Grade))
+		} else {
+			lines = append(lines, formatInt(play.Score))
+		}
 		if play.Plate != "" {
 			lines = append(lines, play.Plate.Name())
 		}

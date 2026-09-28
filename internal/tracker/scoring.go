@@ -6,10 +6,68 @@ import (
 	"strings"
 )
 
-// MaxScore is the highest score a Phoenix-era chart awards.
+// ScoringSystem is how a game version scores and grades a play. Versions
+// that share a scoring system share personal bests across chart links; see
+// README.md, "Adding a game version". Systems are compared with ==, so each
+// is a pointer or a value of a comparable type.
+type ScoringSystem interface {
+	// Name names the scoring system in messages ("Phoenix").
+	Name() string
+	// MaxScore is the highest score a chart can award, or 0 when there is no
+	// known limit.
+	MaxScore() int
+	// ComputeScore works out the score the game awards for a set of judgments
+	// and max combo. ok is false when the system has no verified formula, in
+	// which case a play must give its score.
+	ComputeScore(j Judgments, maxCombo int) (score int, ok bool)
+	// CheckScore returns an error when a logged score cannot be right. j is
+	// the judgments to check it against with maxCombo, or nil when the play
+	// has none, or is a stage break, whose result screen does not add up the
+	// same way.
+	CheckScore(score int, j *Judgments, maxCombo int) error
+	// Grades lists every grade the system awards, best first.
+	Grades() []Grade
+	// Grade returns the grade a result earns, from its score and, when they
+	// were recorded, its judgments (nil otherwise). ok is false when the
+	// grade cannot be worked out: the system has no verified grade table, or
+	// it needs judgments that were not recorded.
+	Grade(score int, j *Judgments) (g Grade, ok bool)
+	// GradeThresholds lists every grade with the lowest score that earns it,
+	// best first, when grades follow from the score alone; nil otherwise.
+	// Progress charts draw them as grade lines.
+	GradeThresholds() []GradeThreshold
+	// HasPlates reports whether the game awards plates.
+	HasPlates() bool
+}
+
+// PhoenixScoring scores and grades plays the way Pump It Up Phoenix does.
+var PhoenixScoring ScoringSystem = phoenixScoring{}
+
+type phoenixScoring struct{}
+
+func (phoenixScoring) Name() string  { return "Phoenix" }
+func (phoenixScoring) MaxScore() int { return MaxScore }
+func (phoenixScoring) ComputeScore(j Judgments, maxCombo int) (int, bool) {
+	return ComputeScore(j, maxCombo), true
+}
+func (phoenixScoring) CheckScore(score int, j *Judgments, maxCombo int) error {
+	if j == nil {
+		return nil
+	}
+	return checkScore(score, *j, maxCombo)
+}
+func (phoenixScoring) Grades() []Grade { return phoenixGrades }
+func (phoenixScoring) Grade(score int, _ *Judgments) (Grade, bool) {
+	return GradeForScore(score), true
+}
+func (phoenixScoring) GradeThresholds() []GradeThreshold { return GradeThresholds() }
+func (phoenixScoring) HasPlates() bool                   { return true }
+
+// MaxScore is the highest score a Phoenix chart awards.
 const MaxScore = 1_000_000
 
-// Grade is a letter grade as awarded by Pump It Up Phoenix.
+// Grade is a letter grade, such as "AA+". Which grades exist depends on the
+// scoring system.
 type Grade string
 
 // GradeThreshold is a grade together with the minimum score that earns it.
@@ -39,7 +97,15 @@ var gradeThresholds = []GradeThreshold{
 	{"F", 0},
 }
 
-// GradeForScore returns the grade a score earns.
+var phoenixGrades = func() []Grade {
+	gs := make([]Grade, len(gradeThresholds))
+	for i, t := range gradeThresholds {
+		gs[i] = t.Grade
+	}
+	return gs
+}()
+
+// GradeForScore returns the grade a score earns in Phoenix.
 func GradeForScore(score int) Grade {
 	for _, t := range gradeThresholds {
 		if score >= t.Min {
@@ -49,25 +115,27 @@ func GradeForScore(score int) Grade {
 	return "F"
 }
 
-// GradeThresholds returns every grade with its minimum score, best first.
+// GradeThresholds returns every Phoenix grade with its minimum score, best
+// first.
 func GradeThresholds() []GradeThreshold { return slices.Clone(gradeThresholds) }
 
-func parseGrade(s string) (Grade, bool) {
+// parseGrade reads a grade as written in the data file, if the scoring
+// system awards it.
+func parseGrade(sys ScoringSystem, s string) (Grade, bool) {
 	g := Grade(strings.ToUpper(strings.ReplaceAll(strings.TrimSpace(s), " ", "")))
-	for _, t := range gradeThresholds {
-		if t.Grade == g {
-			return g, true
-		}
+	if slices.Contains(sys.Grades(), g) {
+		return g, true
 	}
 	return "", false
 }
 
-// Rank orders grades: a higher rank is a better grade.
-func (g Grade) Rank() int {
-	for i, t := range gradeThresholds {
-		if t.Grade == g {
-			return len(gradeThresholds) - i
-		}
+// GradeRank orders the grades of a scoring system: a higher rank is a
+// better grade, and 0 means no grade. Grades of different scoring systems
+// are not comparable.
+func GradeRank(sys ScoringSystem, g Grade) int {
+	gs := sys.Grades()
+	if i := slices.Index(gs, g); i >= 0 {
+		return len(gs) - i
 	}
 	return 0
 }
@@ -180,7 +248,7 @@ const scoreTolerance = 1
 func checkScore(score int, j Judgments, maxCombo int) error {
 	expected := ComputeScore(j, maxCombo)
 	if diff := score - expected; diff > scoreTolerance || diff < -scoreTolerance {
-		return fmt.Errorf("score %d does not match the judgments and max combo, which give %d; check for a typo", score, expected)
+		return fmt.Errorf("score %d does not match the judgments and max combo, which give %d; check for a typo%s", score, expected, octalHint)
 	}
 	return nil
 }

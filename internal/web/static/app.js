@@ -90,12 +90,18 @@
   // ---- Song page: chart tabs ----------------------------------------------------
 
   var tabs = document.querySelectorAll("[data-tab]");
-  var activate = function (key, remember) {
-    var found = false;
+  // A chart lineage's tab also answers to the keys of its older charts.
+  var resolve = function (key) {
+    var found = null;
     each(tabs, function (tab) {
-      found = found || tab.dataset.tab === key;
+      var aliases = (tab.dataset.aliases || "").split(" ");
+      if (!found && (tab.dataset.tab === key || aliases.indexOf(key) >= 0)) found = tab.dataset.tab;
     });
-    if (!found) return;
+    return found;
+  };
+  var activate = function (key, remember) {
+    key = resolve(key);
+    if (!key) return;
     each(tabs, function (tab) {
       var on = tab.dataset.tab === key;
       tab.classList.toggle("is-active", on);

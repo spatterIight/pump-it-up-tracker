@@ -23,6 +23,11 @@ func newTestServer(t *testing.T, basePath string) http.Handler {
 	if err != nil {
 		t.Fatal(err)
 	}
+	return serve(t, tr, basePath)
+}
+
+func serve(t *testing.T, tr *tracker.Tracker, basePath string) http.Handler {
+	t.Helper()
 	custom := t.TempDir()
 	os.WriteFile(filepath.Join(custom, "big-daddy.png"), []byte("\x89PNG\r\n\x1a\nfake"), 0o644)
 	resolver := art.New(art.Options{CacheDir: t.TempDir(), CustomDir: custom})
@@ -59,11 +64,11 @@ func TestPages(t *testing.T) {
 		status int
 		want   []string
 	}{
-		{"/", 200, []string{"PUMP IT UP", "Latest session", `href="/song/big-daddy"`, "Kasou Shinja 仮装信者", `data-modes="single"`, `data-title="Destination" data-modes="coop" data-level=""`, "Hardest clears", "36 plays (7 failed)"}},
+		{"/", 200, []string{"PUMP IT UP", "Latest session", `href="/song/big-daddy"`, "Kasou Shinja 仮装信者", `data-modes="single"`, `data-title="Destination" data-modes="coop" data-level=""`, "Hardest clears", "38 plays (7 failed) in Phoenix"}},
 		{"/song/big-daddy", 200, []string{"<h1 class=\"display\">Big Daddy</h1>", "938,204", "Talented Game", "graph-svg is-wide", "graph-svg is-narrow", "506", "31.1", "First clear"}},
 		{"/song/nemesis", 200, []string{"Stage break", "died at the drill section", `data-tab="s16"`}},
 		{"/song/destination", 200, []string{"CO-OP x2", "with Sam"}},
-		{"/activity", 200, []string{"Sessions", "11 days at the cabinet", "148.2 kcal", "36 plays (7 failed)", `<span class="tag tag-fail">Failed</span>`}},
+		{"/activity", 200, []string{"Sessions", "23 days at the cabinet", "547.8 kcal", "54 plays (8 failed)", `<span class="tag tag-fail">Failed</span>`}},
 		{"/song/nope", 404, []string{"Stage break"}},
 		{"/nope", 404, []string{"nothing at this address"}},
 	}
@@ -163,9 +168,15 @@ func TestChartsAreValidSVG(t *testing.T) {
 	if n := countValidSVGs(t, h, "/song/duel"); n != 2 {
 		t.Errorf("found %d chart SVGs, want 2", n)
 	}
-	// S10 and S12 × three metrics × two layouts; S12 ends with a fail.
-	if n := countValidSVGs(t, h, "/song/vook"); n != 12 {
-		t.Errorf("found %d chart SVGs, want 12", n)
+	// S10, S12 and Prime 2's S7 × three metrics × two layouts; S12 ends
+	// with a fail.
+	if n := countValidSVGs(t, h, "/song/vook"); n != 18 {
+		t.Errorf("found %d chart SVGs, want 18", n)
+	}
+	// A lineage across scoring systems: two score charts, one per system,
+	// then one each for misses and perfect rate, × two layouts.
+	if n := countValidSVGs(t, h, "/song/katkoi"); n != 8 {
+		t.Errorf("found %d chart SVGs, want 8", n)
 	}
 }
 
@@ -218,7 +229,7 @@ func TestAPIAndHealth(t *testing.T) {
 	if err := json.Unmarshal([]byte(body), &data); err != nil {
 		t.Fatal(err)
 	}
-	if data.Stats.Plays != 36 || data.Stats.Fails != 7 || data.Stats.Songs != 15 || data.Art.Resolved != 1 || data.Art.Missing != 14 {
+	if data.Stats.Plays != 38 || data.Stats.Fails != 7 || data.Stats.Songs != 16 || data.Art.Resolved != 1 || data.Art.Missing != 27 {
 		t.Errorf("api stats = %+v art = %+v", data.Stats, data.Art)
 	}
 	songs := map[string]apiSong{}
@@ -239,6 +250,7 @@ func TestAPIAndHealth(t *testing.T) {
 	}
 	// The raw JSON has explicit nulls for a fail with no result.
 	if !strings.Contains(body, `"date": "2026-09-08",
+              "version": "phoenix",
               "score": null,
               "grade": null,
               "broken": true`) {

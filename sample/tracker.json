@@ -499,6 +499,313 @@
       "date": "2026-09-27 20:50",
       "broken": true,
       "kcal": 14.2
+    },
+    {
+      "song": "Hold on (To All Fighters)",
+      "chart": "S7",
+      "date": "2025-07-21 20:16",
+      "version": "prime2",
+      "score": 800800,
+      "grade": "S",
+      "judgments": {
+        "perfect": 393,
+        "great": 43,
+        "good": 7,
+        "bad": 2,
+        "miss": 0
+      },
+      "max_combo": 187,
+      "kcal": 19.18
+    },
+    {
+      "song": "Kasou Shinja 仮装信者",
+      "chart": "S9",
+      "date": "2025-07-25 21:35",
+      "version": "prime2",
+      "score": 781900,
+      "grade": "S",
+      "judgments": {
+        "perfect": 344,
+        "great": 29,
+        "good": 4,
+        "bad": 0,
+        "miss": 0
+      },
+      "max_combo": 373,
+      "kcal": 22.76
+    },
+    {
+      "song": "Vook",
+      "chart": "S7",
+      "date": "2025-07-25 22:03",
+      "version": "prime2",
+      "score": 419400,
+      "grade": "A",
+      "judgments": {
+        "perfect": 285,
+        "great": 25,
+        "good": 3,
+        "bad": 2,
+        "miss": 2
+      },
+      "max_combo": 143,
+      "kcal": 18.061
+    },
+    {
+      "song": "Campanella",
+      "chart": "S9",
+      "date": "2025-07-28 21:18",
+      "version": "prime2",
+      "score": 523000,
+      "grade": "A",
+      "judgments": {
+        "perfect": 354,
+        "great": 47,
+        "good": 14,
+        "bad": 3,
+        "miss": 11
+      },
+      "max_combo": 151,
+      "kcal": 22.539
+    },
+    {
+      "song": "Anguished Unmaking",
+      "chart": "S8",
+      "date": "2025-07-30 19:58",
+      "version": "prime2",
+      "score": 684100,
+      "grade": "S",
+      "judgments": {
+        "perfect": 317,
+        "great": 33,
+        "good": 8,
+        "bad": 1,
+        "miss": 0
+      },
+      "max_combo": 285,
+      "kcal": 21.091
+    },
+    {
+      "song": "Pumptris 8Bit ver.",
+      "chart": "S8",
+      "date": "2025-08-02 18:41",
+      "version": "prime2",
+      "score": 767100,
+      "grade": "A",
+      "judgments": {
+        "perfect": 401,
+        "great": 24,
+        "good": 11,
+        "bad": 0,
+        "miss": 2
+      },
+      "max_combo": 404,
+      "kcal": 23.376
+    },
+    {
+      "song": "HELIX",
+      "chart": "S7",
+      "date": "2025-08-03 01:24",
+      "version": "prime2",
+      "score": 594400,
+      "grade": "A",
+      "judgments": {
+        "perfect": 408,
+        "great": 30,
+        "good": 17,
+        "bad": 6,
+        "miss": 3
+      },
+      "max_combo": 132,
+      "kcal": 20.91
+    },
+    {
+      "song": "BSPower Explosion",
+      "chart": "S8",
+      "date": "2025-08-03 01:42",
+      "version": "prime2",
+      "score": 770200,
+      "grade": "A",
+      "judgments": {
+        "perfect": 446,
+        "great": 20,
+        "good": 4,
+        "bad": 2,
+        "miss": 2
+      },
+      "max_combo": 212,
+      "kcal": 23.695
+    },
+    {
+      "song": "Katkoi",
+      "chart": "S7",
+      "date": "2025-08-06 20:38",
+      "version": "prime2",
+      "score": 646600,
+      "grade": "A",
+      "judgments": {
+        "perfect": 397,
+        "great": 23,
+        "good": 3,
+        "bad": 2,
+        "miss": 2
+      },
+      "max_combo": 245,
+      "kcal": 24.268
+    },
+    {
+      "song": "Campanella",
+      "chart": "S9",
+      "date": "2025-08-13 17:43",
+      "version": "prime2",
+      "score": 705500,
+      "grade": "A",
+      "judgments": {
+        "perfect": 389,
+        "great": 22,
+        "good": 9,
+        "bad": 1,
+        "miss": 8
+      },
+      "max_combo": 358,
+      "kcal": 22.206
+    },
+    {
+      "song": "Start On Red",
+      "chart": "S8",
+      "date": "2025-09-02 19:28",
+      "version": "prime2",
+      "score": 718400,
+      "grade": "A",
+      "judgments": {
+        "perfect": 398,
+        "great": 27,
+        "good": 5,
+        "bad": 3,
+        "miss": 2
+      },
+      "max_combo": 287,
+      "kcal": 23.695
+    },
+    {
+      "song": "Yog-Sothoth",
+      "chart": "S9",
+      "date": "2025-09-09 18:11",
+      "version": "prime2",
+      "score": 549600,
+      "grade": "B",
+      "judgments": {
+        "perfect": 421,
+        "great": 38,
+        "good": 15,
+        "bad": 7,
+        "miss": 61
+      },
+      "max_combo": 186,
+      "kcal": 26.858
+    },
+    {
+      "song": "Le Grand Bleu",
+      "chart": "S7",
+      "date": "2025-09-09 18:15",
+      "version": "prime2",
+      "score": 1038500,
+      "grade": "S",
+      "judgments": {
+        "perfect": 496,
+        "great": 31,
+        "good": 2,
+        "bad": 1,
+        "miss": 0
+      },
+      "max_combo": 460,
+      "kcal": 19.18
+    },
+    {
+      "song": "You Got Me Crazy",
+      "chart": "S6",
+      "date": "2025-09-09 19:00",
+      "version": "prime2",
+      "score": 890000,
+      "grade": "S",
+      "judgments": {
+        "perfect": 383,
+        "great": 49,
+        "good": 5,
+        "bad": 0,
+        "miss": 0
+      },
+      "max_combo": 432,
+      "kcal": 13.372
+    },
+    {
+      "song": "Bad Apple!! feat. Nomico",
+      "chart": "S9",
+      "date": "2025-09-10 14:55",
+      "version": "prime2",
+      "score": 834300,
+      "grade": "A",
+      "judgments": {
+        "perfect": 469,
+        "great": 26,
+        "good": 0,
+        "bad": 1,
+        "miss": 1
+      },
+      "max_combo": 279,
+      "kcal": 21.653
+    },
+    {
+      "song": "Cannon X.1",
+      "chart": "S12",
+      "date": "2026-07-30 20:50",
+      "version": "xx",
+      "score": 859400,
+      "grade": "C",
+      "broken": true,
+      "judgments": {
+        "perfect": 634,
+        "great": 36,
+        "good": 15,
+        "bad": 28,
+        "miss": 59
+      },
+      "max_combo": 106,
+      "kcal": 52.624,
+      "note": "the grade was shown cracked"
+    },
+    {
+      "song": "Katkoi",
+      "chart": "S7",
+      "date": "2026-09-20 18:55",
+      "score": 967871,
+      "judgments": {
+        "perfect": 402,
+        "great": 18,
+        "good": 4,
+        "bad": 2,
+        "miss": 1
+      },
+      "max_combo": 310,
+      "continues": {
+        "version": "prime2",
+        "chart": "S7"
+      }
+    },
+    {
+      "song": "Katkoi",
+      "chart": "S7",
+      "date": "2026-09-27 19:40",
+      "score": 978502,
+      "judgments": {
+        "perfect": 410,
+        "great": 12,
+        "good": 3,
+        "bad": 1,
+        "miss": 1
+      },
+      "max_combo": 402,
+      "kcal": 24.1
     }
   ]
 }

@@ -54,6 +54,7 @@ type scoreData struct {
 	Song      flexString     `json:"song"`
 	Chart     flexString     `json:"chart"`
 	Date      flexString     `json:"date"`
+	Version   flexString     `json:"version"`
 	Score     *flexInt       `json:"score"`
 	Grade     string         `json:"grade"`
 	Plate     string         `json:"plate"`
@@ -62,6 +63,13 @@ type scoreData struct {
 	MaxCombo  *flexInt       `json:"max_combo"`
 	Kcal      *float64       `json:"kcal"`
 	Note      flexString     `json:"note"`
+	Continues *continuesData `json:"continues"`
+}
+
+// continuesData links a chart to the same step chart in an earlier version.
+type continuesData struct {
+	Version flexString `json:"version"`
+	Chart   flexString `json:"chart"`
 }
 
 type judgmentsData struct {
@@ -146,7 +154,16 @@ func LoadFile(path string) (*Tracker, error) {
 
 // Load reads and validates score data. A *ValidationError lists every problem
 // found, so that they can all be fixed in one go.
-func Load(r io.Reader) (*Tracker, error) {
+func Load(r io.Reader) (*Tracker, error) { return LoadVersions(r, versions) }
+
+// LoadVersions is Load for the given game versions, in release order, rather
+// than the ones this build reads. Tests use it to stand in for a future
+// version.
+func LoadVersions(r io.Reader, vs []Version) (*Tracker, error) {
+	set, err := newVersionSet(vs)
+	if err != nil {
+		return nil, err
+	}
 	b, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
@@ -167,7 +184,7 @@ func Load(r io.Reader) (*Tracker, error) {
 	if problems := decodeObject(doc, &data, ""); len(problems) > 0 {
 		return nil, &ValidationError{Problems: problems}
 	}
-	return build(data)
+	return build(data, set)
 }
 
 // decodeObject decodes the JSON object b into the struct v points to, one key
@@ -366,7 +383,23 @@ func parseDate(s string) (time.Time, bool, error) {
 
 const octalHint = " (YAML reads numbers written with a leading zero, such as 031, as octal: write 31)"
 
-func build(data fileData) (*Tracker, error) {
+// chartID identifies a chart: a song (by its lowercased title), a version
+// and a chart of it.
+type chartID struct {
+	song    string
+	version *Version
+	chart   Chart
+}
+
+// link is a `continues` link as logged by one entry.
+type link struct {
+	where  string
+	from   chartID
+	to     chartID
+	target string // the target as written in messages: "S7 in Phoenix"
+}
+
+func build(data fileData, vs versionSet) (*Tracker, error) {
 	var problems []string
 	addf := func(format string, args ...any) { problems = append(problems, fmt.Sprintf(format, args...)) }
 
@@ -379,8 +412,10 @@ func build(data fileData) (*Tracker, error) {
 	problems = append(problems, decodeObject(data.Player, &player, "player")...)
 	t := &Tracker{
 		Player:      strings.TrimSpace(string(player.Name)),
+		Versions:    vs,
 		songsBySlug: map[string]*Song{},
 	}
+	defaultVersion, _ := vs.lookup(DefaultVersion)
 
 	// Songs are matched case-insensitively, so "Big daddy" in one entry and
 	// "Big Daddy" in another are the same song. The spelling used in the song
@@ -417,7 +452,11 @@ func build(data fileData) (*Tracker, error) {
 		}
 	}
 
-	histories := map[*Song]map[Chart]*ChartHistory{}
+	histories := map[chartID]*ChartHistory{}
+	// logged holds every chart named by an entry, even one rejected for
+	// another mistake, so that a link to it is not reported as well.
+	logged := map[chartID]bool{}
+	var links []link
 
 	for i, entry := range data.Scores {
 		// The keys that could be read still name the entry.
@@ -452,10 +491,27 @@ func build(data fileData) (*Tracker, error) {
 		} else if date, hasTime, err = parseDate(string(raw.Date)); err != nil {
 			addf("%s: %v", where, err)
 		}
+		version := defaultVersion
+		if strings.TrimSpace(string(raw.Version)) != "" {
+			v, ok := vs.lookup(string(raw.Version))
+			if !ok {
+				// The rest of the entry depends on its version.
+				addf("%s: version %q is not a supported game version (expected %s)", where, raw.Version, vs.list())
+				continue
+			}
+			version = v
+		}
+		id := chartID{strings.ToLower(title), version, chart}
+		identified := len(problems) == entryProblems
+		if identified {
+			logged[id] = true
+		}
+		sys := version.Scoring
+		canCompute := computesScores(sys)
 
 		// A stage break with no score is a fail the result screen shows as
 		// "-": nothing about it was recorded beyond when it happened.
-		noScore := raw.Broken && raw.Score == nil && (raw.Judgments == nil || raw.MaxCombo == nil)
+		noScore := raw.Broken && raw.Score == nil && (!canCompute || raw.Judgments == nil || raw.MaxCombo == nil)
 		if noScore {
 			var extra []string
 			if raw.Grade != "" {
@@ -471,8 +527,12 @@ func build(data fileData) (*Tracker, error) {
 				extra = append(extra, "max_combo")
 			}
 			if len(extra) > 0 {
-				addf("%s: a broken play without a score is a fail with no result, so it cannot have %s (only song, chart, date, kcal and note); "+
-					"if the result screen showed a score, add it, or both judgments and max_combo", where, strings.Join(extra, " or "))
+				hint := "if the result screen showed a score, add it, or both judgments and max_combo"
+				if !canCompute {
+					hint = "if the result screen showed a score, add it"
+				}
+				addf("%s: a broken play without a score is a fail with no result, so it cannot have %s (only song, chart, date, kcal and note); %s",
+					where, strings.Join(extra, " or "), hint)
 			}
 		}
 
@@ -517,48 +577,65 @@ func build(data fileData) (*Tracker, error) {
 		score := -1
 		if raw.Score != nil {
 			score = int(*raw.Score)
-			if score < 0 || score > MaxScore {
-				addf("%s: score %d is outside 0 to %d", where, score, MaxScore)
+			if maxScore := sys.MaxScore(); maxScore > 0 && (score < 0 || score > maxScore) {
+				addf("%s: score %d is outside 0 to %d", where, score, maxScore)
+			} else if score < 0 {
+				addf("%s: score cannot be negative", where)
 			}
 		}
 
 		if len(problems) == entryProblems && !noScore {
 			canReconcile := judgments != nil && maxCombo >= 0
 			switch {
-			case score < 0 && canReconcile:
-				score = ComputeScore(*judgments, maxCombo)
-			case score < 0:
+			case score < 0 && canReconcile && canCompute:
+				score, _ = sys.ComputeScore(*judgments, maxCombo)
+			case score < 0 && canCompute:
 				addf("%s: score is required, unless judgments and max_combo are given to work it out from "+
 					"(for a failed play with no score, add broken: true instead)", where)
-			case canReconcile && !raw.Broken:
+			case score < 0:
+				addf("%s: score is required in %s, which cannot be worked out from judgments "+
+					"(for a failed play with no score, add broken: true instead)", where, version.Name)
+			default:
 				// A broken stage stops counting notes part-way through, so its
 				// result screen does not add up the same way.
-				if err := checkScore(score, *judgments, maxCombo); err != nil {
-					addf("%s: %v%s", where, err, octalHint)
+				var against *Judgments
+				if canReconcile && !raw.Broken {
+					against = judgments
+				}
+				if err := sys.CheckScore(score, against, maxCombo); err != nil {
+					addf("%s: %v", where, err)
 				}
 			}
 		}
 
 		var grade Grade
+		gradeWorkedOut := false
 		if score >= 0 {
-			grade = GradeForScore(score)
+			grade, gradeWorkedOut = sys.Grade(score, judgments)
 		}
 		if raw.Grade != "" && !noScore {
-			g, ok := parseGrade(raw.Grade)
+			g, ok := parseGrade(sys, raw.Grade)
 			switch {
 			case !ok:
-				addf("%s: grade %q is not a Phoenix grade (SSS+, SSS, SS+, SS, S+, S, AAA+, AAA, AA+, AA, A+, A, B, C, D, F)", where, raw.Grade)
-			case raw.Broken:
+				addf("%s: grade %q is not a %s grade (%s)", where, raw.Grade, version.Name, gradeList(sys.Grades()))
+			case raw.Broken || !gradeWorkedOut:
 				grade = g
 			case score >= 0 && g != grade:
-				addf("%s: grade %s does not match score %d, which earns %s; check for a typo", where, g, score, grade)
+				if sys.GradeThresholds() != nil {
+					addf("%s: grade %s does not match score %d, which earns %s; check for a typo", where, g, score, grade)
+				} else {
+					addf("%s: grade %s does not match the result, which earns %s in %s; check for a typo", where, g, grade, version.Name)
+				}
 			}
 		}
 
 		var plate Plate
 		if raw.Plate != "" && !noScore {
 			p, ok := parsePlate(raw.Plate)
-			if !ok {
+			switch {
+			case !sys.HasPlates():
+				addf("%s: plate is not used in %s, which has no plates", where, version.Name)
+			case !ok:
 				addf("%s: plate %q is not one of PG, UG, EG, SG, MG, TG, FG, RG (or their full names)", where, raw.Plate)
 			}
 			plate = p
@@ -572,29 +649,32 @@ func build(data fileData) (*Tracker, error) {
 			kcal = *raw.Kcal
 		}
 
+		if c := raw.Continues; c != nil {
+			if l, ok := parseLink(c, vs, version, where, addf); ok && identified {
+				l.from = id
+				l.to.song = id.song
+				links = append(links, l)
+			}
+		}
+
 		if len(problems) > entryProblems {
 			continue
 		}
 
-		key := strings.ToLower(title)
-		song, ok := songs[key]
+		song, ok := songs[id.song]
 		if !ok {
 			song = &Song{Title: title}
-			songs[key] = song
+			songs[id.song] = song
 		}
-		byChart := histories[song]
-		if byChart == nil {
-			byChart = map[Chart]*ChartHistory{}
-			histories[song] = byChart
-		}
-		hist := byChart[chart]
+		hist := histories[id]
 		if hist == nil {
-			hist = &ChartHistory{Song: song, Chart: chart, FewestMisses: -1, BestPerfectRate: -1}
-			byChart[chart] = hist
+			hist = &ChartHistory{Song: song, Version: version, Chart: chart}
+			histories[id] = hist
 			song.Charts = append(song.Charts, hist)
 		}
 		play := &Play{
 			Song:      song,
+			Version:   version,
 			Chart:     chart,
 			History:   hist,
 			Date:      date,
@@ -614,19 +694,16 @@ func build(data fileData) (*Tracker, error) {
 		t.Plays = append(t.Plays, play)
 	}
 
+	problems = append(problems, resolveLinks(links, logged, histories)...)
 	if len(problems) > 0 {
 		return nil, &ValidationError{Problems: problems}
 	}
 
-	chronological := func(ps []*Play) {
-		sort.SliceStable(ps, func(i, j int) bool {
-			if !ps[i].Date.Equal(ps[j].Date) {
-				return ps[i].Date.Before(ps[j].Date)
-			}
-			return ps[i].index < ps[j].index
-		})
-	}
 	chronological(t.Plays)
+	t.Current = vs[len(vs)-1]
+	if len(t.Plays) > 0 {
+		t.Current = t.PlayedVersions()[0]
+	}
 
 	usedSlugs := map[string]bool{}
 	titles := make([]string, 0, len(songs))
@@ -646,52 +723,205 @@ func build(data fileData) (*Tracker, error) {
 		t.Songs = append(t.Songs, s)
 
 		chronological(s.Plays)
-		sort.Slice(s.Charts, func(i, j int) bool { return s.Charts[i].Chart.Less(s.Charts[j].Chart) })
+		sort.Slice(s.Charts, func(i, j int) bool { return chartBefore(s.Charts[i], s.Charts[j]) })
+		s.Version = s.Charts[0].Version
 		for _, h := range s.Charts {
 			chronological(h.Plays)
-			h.derive()
+			for _, p := range h.Plays {
+				if p.Broken {
+					h.Fails++
+				} else {
+					h.Clears++
+				}
+			}
 		}
+		s.Lineages = buildLineages(s)
 	}
 	t.Days = groupDays(t.Plays)
 	return t, nil
 }
 
-func (h *ChartHistory) derive() {
-	best := 0
-	for _, p := range h.Plays {
-		if p.Judgments != nil {
-			if m := p.Judgments.Misses(); h.FewestMisses < 0 || m < h.FewestMisses {
-				h.FewestMisses = m
-			}
-			if r := p.Judgments.PerfectRate(); r > h.BestPerfectRate {
-				h.BestPerfectRate = r
-			}
+// chronological sorts plays by date, then by their order in the data file.
+func chronological(ps []*Play) {
+	sort.SliceStable(ps, func(i, j int) bool {
+		if !ps[i].Date.Equal(ps[j].Date) {
+			return ps[i].Date.Before(ps[j].Date)
 		}
-		if p.Broken {
-			h.Fails++
+		return ps[i].index < ps[j].index
+	})
+}
+
+// chartBefore orders a song's charts: newest version first, then by mode and
+// level.
+func chartBefore(a, b *ChartHistory) bool {
+	if a.Version != b.Version {
+		return b.Version.Before(a.Version)
+	}
+	return a.Chart.Less(b.Chart)
+}
+
+func gradeList(gs []Grade) string {
+	names := make([]string, len(gs))
+	for i, g := range gs {
+		names[i] = string(g)
+	}
+	return strings.Join(names, ", ")
+}
+
+// computesScores reports whether a scoring system works out scores from
+// judgments and max combo. A system either always can or never can.
+func computesScores(sys ScoringSystem) bool {
+	_, ok := sys.ComputeScore(Judgments{Perfect: 1}, 1)
+	return ok
+}
+
+// parseLink reads the `continues` key of an entry of version v.
+func parseLink(c *continuesData, vs versionSet, v *Version, where string, addf func(string, ...any)) (link, bool) {
+	valid := true
+	target, err := ParseChart(string(c.Chart))
+	if strings.TrimSpace(string(c.Chart)) == "" {
+		addf("%s: continues.chart is required: the chart this one continues, as its level ball showed it in that version", where)
+		valid = false
+	} else if err != nil {
+		addf("%s: continues.%v", where, err)
+		valid = false
+	}
+	tv, known := vs.lookup(string(c.Version))
+	switch {
+	case strings.TrimSpace(string(c.Version)) == "":
+		addf("%s: continues.version is required: the earlier version the chart is continued from (%s)", where, vs.list())
+		valid = false
+	case !known:
+		addf("%s: continues.version %q is not a supported game version (expected %s)", where, c.Version, vs.list())
+		valid = false
+	case !tv.Before(v):
+		addf("%s: continues %s, which was not released before %s; a chart can only continue a chart of an earlier version", where, tv.Name, v.Name)
+		valid = false
+	}
+	if !valid {
+		return link{}, false
+	}
+	return link{
+		where:  where,
+		to:     chartID{version: tv, chart: target},
+		target: fmt.Sprintf("%s in %s", target, tv.Name),
+	}, true
+}
+
+// resolveLinks joins linked charts and reports links that conflict, and
+// links to charts that were never played.
+func resolveLinks(links []link, logged map[chartID]bool, histories map[chartID]*ChartHistory) []string {
+	var problems []string
+	first := map[chartID]link{}     // the first link of each chart
+	successor := map[chartID]link{} // the first chart continuing each chart
+	for _, l := range links {
+		if prev, seen := first[l.from]; seen {
+			if prev.to != l.to {
+				problems = append(problems, fmt.Sprintf("%s: continues %s, but %s says this chart continues %s; a chart can only continue one chart",
+					l.where, l.target, prev.where, prev.target))
+			}
 			continue
 		}
-		h.Clears++
+		first[l.from] = l
+		if !logged[l.to] {
+			problems = append(problems, fmt.Sprintf("%s: continues %s, which has no plays; log at least one play of that chart, or check the version and chart",
+				l.where, l.target))
+			continue
+		}
+		if prev, taken := successor[l.to]; taken {
+			problems = append(problems, fmt.Sprintf("%s: continues %s, but %s in %s already continues that chart (%s); a chart can only be continued by one chart",
+				l.where, l.target, prev.from.chart, prev.from.version.Name, prev.where))
+			continue
+		}
+		successor[l.to] = l
+		if from, to := histories[l.from], histories[l.to]; from != nil && to != nil {
+			from.Continues = to
+		}
+	}
+	return problems
+}
+
+// buildLineages follows the song's chart links into lineages, split into
+// records where the scoring system changes, and works out personal bests.
+func buildLineages(s *Song) []*Lineage {
+	continued := map[*ChartHistory]bool{}
+	for _, h := range s.Charts {
+		if h.Continues != nil {
+			continued[h.Continues] = true
+		}
+	}
+	var lineages []*Lineage
+	// s.Charts is in the order lineages are listed in: by newest chart.
+	for _, newest := range s.Charts {
+		if continued[newest] {
+			continue
+		}
+		l := &Lineage{Song: s, FewestMisses: -1, BestPerfectRate: -1}
+		for h := newest; h != nil; h = h.Continues {
+			l.Charts = append([]*ChartHistory{h}, l.Charts...)
+		}
+		var r *Record
+		for _, h := range l.Charts {
+			h.Lineage = l
+			if r == nil || r.Scoring != h.Version.Scoring {
+				r = &Record{Lineage: l, Scoring: h.Version.Scoring}
+				l.Records = append(l.Records, r)
+			}
+			h.Record = r
+			r.Charts = append(r.Charts, h)
+			r.Plays = append(r.Plays, h.Plays...)
+			l.Plays = append(l.Plays, h.Plays...)
+		}
+		chronological(l.Plays)
+		for _, r := range l.Records {
+			chronological(r.Plays)
+			r.derive()
+			l.Clears += r.Clears
+			l.Fails += r.Fails
+		}
+		for _, p := range l.Plays {
+			if p.Judgments != nil {
+				if m := p.Judgments.Misses(); l.FewestMisses < 0 || m < l.FewestMisses {
+					l.FewestMisses = m
+				}
+				if r := p.Judgments.PerfectRate(); r > l.BestPerfectRate {
+					l.BestPerfectRate = r
+				}
+			}
+		}
+		lineages = append(lineages, l)
+	}
+	return lineages
+}
+
+func (r *Record) derive() {
+	best := 0
+	for _, p := range r.Plays {
+		if p.Broken {
+			r.Fails++
+			continue
+		}
+		r.Clears++
 		p.PrevBest = best
-		if !h.Cleared {
+		if !r.Cleared {
 			p.FirstClear = true
 		}
-		if !h.Cleared || p.Score > best {
+		if !r.Cleared || p.Score > best {
 			p.IsPB = true
 			best = p.Score
 		}
-		h.Cleared = true
-		if p.Plate.Rank() > h.BestPlate.Rank() {
-			h.BestPlate = p.Plate
+		r.Cleared = true
+		if p.Plate.Rank() > r.BestPlate.Rank() {
+			r.BestPlate = p.Plate
 		}
-		if h.Best == nil || p.Score > h.Best.Score {
-			h.Best = p
+		if r.Best == nil || p.Score > r.Best.Score {
+			r.Best = p
 		}
 	}
-	if h.Best == nil {
-		for _, p := range h.Plays {
-			if p.HasScore() && (h.Best == nil || p.Score > h.Best.Score) {
-				h.Best = p
+	if r.Best == nil {
+		for _, p := range r.Plays {
+			if p.HasScore() && (r.Best == nil || p.Score > r.Best.Score) {
+				r.Best = p
 			}
 		}
 	}

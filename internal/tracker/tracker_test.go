@@ -173,10 +173,10 @@ func TestBrokenPlaysSkipChecks(t *testing.T) {
 		"judgments": {"perfect": 300, "great": 31, "good": 11, "bad": 7, "miss": 60}, "max_combo": 120
 	}]}`)
 	p := tr.Plays[0]
-	if p.Grade != "F" || p.IsPB || tr.Songs[0].Charts[0].Cleared {
+	if p.Grade != "F" || p.IsPB || tr.Songs[0].Charts[0].Record.Cleared {
 		t.Errorf("broken play = %+v", p)
 	}
-	if tr.Songs[0].Charts[0].Best != p {
+	if tr.Songs[0].Charts[0].Record.Best != p {
 		t.Errorf("an uncleared chart's best should be its best broken play")
 	}
 }
@@ -193,8 +193,8 @@ func TestNoScoreFail(t *testing.T) {
 		t.Errorf("no-score fail = %+v", p)
 	}
 	h := tr.Songs[0].Charts[0]
-	if h.Best != nil || h.Cleared || h.Clears != 0 || h.Fails != 1 || h.BestPlate != "" {
-		t.Errorf("chart = best %v cleared %v clears %d fails %d plate %q", h.Best, h.Cleared, h.Clears, h.Fails, h.BestPlate)
+	if h.Record.Best != nil || h.Record.Cleared || h.Clears != 0 || h.Fails != 1 || h.Record.BestPlate != "" {
+		t.Errorf("chart = best %v cleared %v clears %d fails %d plate %q", h.Record.Best, h.Record.Cleared, h.Clears, h.Fails, h.Record.BestPlate)
 	}
 	if g := tr.Songs[0].BestGrade(); g != "" {
 		t.Errorf("BestGrade = %q, want none", g)
@@ -237,7 +237,7 @@ func TestBrokenPlayWithJudgmentsHasAScore(t *testing.T) {
 		"song": "Big Daddy", "chart": "S11", "date": "2026-09-28", "broken": true,
 		"judgments": {"perfect": 506, "great": 31, "good": 11, "bad": 7, "miss": 6}, "max_combo": 294
 	}]}`)
-	if p := tr.Plays[0]; p.Score != 938204 || p.Grade != "AA+" || tr.Songs[0].Charts[0].Best != p {
+	if p := tr.Plays[0]; p.Score != 938204 || p.Grade != "AA+" || tr.Songs[0].Charts[0].Record.Best != p {
 		t.Errorf("play = %+v", p)
 	}
 }
@@ -263,7 +263,7 @@ func snapshot(t *Tracker) string {
 	for _, s := range t.Songs {
 		fmt.Fprintf(&b, "song %s slug=%s best=%s\n", s.Title, s.Slug, s.BestGrade())
 		for _, h := range s.Charts {
-			fmt.Fprintf(&b, "  chart %s best=%d/%s cleared=%v plate=%s fewest=%d perfect=%.3f\n", h.Chart, h.Best.Score, h.Best.Grade, h.Cleared, h.BestPlate, h.FewestMisses, h.BestPerfectRate)
+			fmt.Fprintf(&b, "  chart %s best=%d/%s cleared=%v plate=%s fewest=%d perfect=%.3f\n", h.Chart, h.Record.Best.Score, h.Record.Best.Grade, h.Record.Cleared, h.Record.BestPlate, h.Lineage.FewestMisses, h.Lineage.BestPerfectRate)
 			for _, p := range h.Plays {
 				fmt.Fprintf(&b, "    %s score=%d grade=%s plate=%s broken=%v pb=%v first=%v prev=%d combo=%d kcal=%g\n", p.Date.Format("2006-01-02T15:04"), p.Score, p.Grade, p.Plate, p.Broken, p.IsPB, p.FirstClear, p.PrevBest, p.MaxCombo, p.Kcal)
 			}
@@ -352,7 +352,7 @@ func TestUnreadableFiles(t *testing.T) {
 func TestUnknownFieldsAreRejected(t *testing.T) {
 	wantProblem(t, `{"schema_version": 1, "scores": [{
 		"song": "Big Daddy", "chart": "S11", "date": "2026-09-28", "score": 938204, "perfects": 506
-	}]}`, `scores[0] (Big Daddy S11): unknown key "perfects" (expected song, chart, date, score, grade, plate, broken, judgments, max_combo, kcal, note)`)
+	}]}`, `scores[0] (Big Daddy S11): unknown key "perfects" (expected song, chart, date, version, score, grade, plate, broken, judgments, max_combo, kcal, note, continues)`)
 	wantProblem(t, `{"schema_version": 1, "scores": [{
 		"song": "Big Daddy", "chart": "S11", "date": "2026-09-28", "score": 938204,
 		"judgments": {"perfects": 506, "great": 31, "good": 11, "bad": 7, "miss": 6}
@@ -402,8 +402,8 @@ func TestHistoryAndPersonalBests(t *testing.T) {
 	if last := s11.Plays[3]; last.PrevBest != 910000 || last.Delta() != 28204 {
 		t.Errorf("last play prev best %d delta %d", last.PrevBest, last.Delta())
 	}
-	if s11.Best.Score != 938204 || s11.BestPlate != "TG" || !s11.Cleared {
-		t.Errorf("S11 summary = best %d plate %s cleared %v", s11.Best.Score, s11.BestPlate, s11.Cleared)
+	if s11.Record.Best.Score != 938204 || s11.Record.BestPlate != "TG" || !s11.Record.Cleared {
+		t.Errorf("S11 summary = best %d plate %s cleared %v", s11.Record.Best.Score, s11.Record.BestPlate, s11.Record.Cleared)
 	}
 	if bd.TopChart().Chart.String() != "D12" {
 		t.Errorf("top chart = %s", bd.TopChart().Chart)
@@ -435,15 +435,15 @@ func TestFailsAroundClears(t *testing.T) {
 
 	only := byTitle["Only Fails"]
 	h := only.Charts[0]
-	if h.Best != nil || h.Cleared || h.Clears != 0 || h.Fails != 2 || only.Cleared() || only.BestGrade() != "" {
-		t.Errorf("only fails: best %v cleared %v clears %d fails %d", h.Best, h.Cleared, h.Clears, h.Fails)
+	if h.Record.Best != nil || h.Record.Cleared || h.Clears != 0 || h.Fails != 2 || only.Cleared() || only.BestGrade() != "" {
+		t.Errorf("only fails: best %v cleared %v clears %d fails %d", h.Record.Best, h.Record.Cleared, h.Clears, h.Fails)
 	}
 
 	before := byTitle["Fails Then Clear"]
 	h = before.Charts[0]
 	clear := h.Plays[2]
-	if h.Best != clear || !h.Cleared || h.Clears != 1 || h.Fails != 2 || h.BestPlate != "RG" {
-		t.Errorf("fails then clear: best %v cleared %v clears %d fails %d", h.Best, h.Cleared, h.Clears, h.Fails)
+	if h.Record.Best != clear || !h.Record.Cleared || h.Clears != 1 || h.Fails != 2 || h.Record.BestPlate != "RG" {
+		t.Errorf("fails then clear: best %v cleared %v clears %d fails %d", h.Record.Best, h.Record.Cleared, h.Clears, h.Fails)
 	}
 	if !clear.FirstClear || !clear.IsPB || clear.PrevBest != 0 || before.BestGrade() != "A" {
 		t.Errorf("first clear after fails = %+v, song best grade %s", clear, before.BestGrade())
@@ -456,8 +456,8 @@ func TestFailsAroundClears(t *testing.T) {
 
 	after := byTitle["Clear Then Fails"]
 	h = after.Charts[0]
-	if h.Best != h.Plays[0] || !h.Cleared || h.Clears != 1 || h.Fails != 3 || h.BestPlate != "FG" {
-		t.Errorf("clear then fails: best %v cleared %v clears %d fails %d", h.Best, h.Cleared, h.Clears, h.Fails)
+	if h.Record.Best != h.Plays[0] || !h.Record.Cleared || h.Clears != 1 || h.Fails != 3 || h.Record.BestPlate != "FG" {
+		t.Errorf("clear then fails: best %v cleared %v clears %d fails %d", h.Record.Best, h.Record.Cleared, h.Clears, h.Fails)
 	}
 	for _, p := range h.Plays[1:] {
 		if p.IsPB || p.FirstClear {
