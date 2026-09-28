@@ -391,6 +391,7 @@ h2 {
 .g-sssp { --gc: #ff4fb4; } .g-sss { --gc: #ff6d9a; } .g-ssp { --gc: #ff8a78; } .g-ss { --gc: #ffa55a; } .g-sp { --gc: #ffc23e; } .g-s { --gc: #ffdc4a; }
 .g-aaap { --gc: #ffc21a; } .g-aaa { --gc: #ffa51e; } .g-aap { --gc: #ff8a1c; } .g-aa { --gc: #f26c1a; } .g-ap { --gc: #d9541e; } .g-a { --gc: #b8461f; }
 .g-b { --gc: #8ea6ff; } .g-c { --gc: #6d7dff; } .g-d { --gc: #5a55d6; } .g-f { --gc: #ff3d5e; }
+.g-none { --gc: #5d6f92; }
 .gb-swatch { width: 12px; height: 8px; transform: skewX(-24deg); background: var(--gc); box-shadow: 0 0 6px var(--gc); }
 .grade-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 22px; font-size: 13px; color: var(--text-2); }
 .grade-legend li { display: flex; align-items: center; gap: 8px; }
@@ -827,7 +828,7 @@ h2 {
 .js .chart-panel:not(.is-active) { display: none; }
 
 .panel-summary { display: grid; grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr); gap: 12px; align-content: start; }
-.panel-summary .result { grid-row: span 3; }
+.panel-summary .result { grid-row: span var(--stat-rows, 3); }
 .panel-summary .stat {
   --cut: 12px;
   display: grid;
@@ -1133,6 +1134,68 @@ h2 {
 .footer > span:first-child { font-weight: 700; font-style: italic; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-2); }
 .footer a { color: var(--text-2); text-decoration: underline; text-decoration-color: var(--edge-dim); }
 .footer a:hover { color: var(--cyan); }
+
+/* ---------- Game versions ---------- */
+
+/* A play, chart or song from a version older than the newest one played. */
+.ver {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  margin-right: 8px;
+  padding: 2px 9px 2px 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-style: italic;
+  line-height: 1.2;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  vertical-align: 0.1em;
+  color: #e6d9ff;
+  background: linear-gradient(180deg, rgba(150, 100, 255, 0.55), rgba(90, 50, 200, 0.55));
+  clip-path: polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%);
+}
+.card-ver { position: absolute; z-index: 1; left: 12px; top: 10px; }
+.card-ver .ver { margin: 0; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.6); }
+.mini-chart { display: flex; align-items: center; gap: 8px; }
+.mini-chart .ver { margin: 0; }
+.a-chart { display: flex; align-items: center; gap: 8px; margin-top: 2px; font-size: 12.5px; font-weight: 700; letter-spacing: 0.08em; color: var(--text-2); }
+.a-chart .ver { margin: 0; }
+.version-counts { list-style: none; display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 12px 0 0; padding: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; color: var(--text-2); }
+.version-counts a { display: inline-flex; align-items: center; }
+.version-counts a:hover { color: #fff; }
+.version-filter { padding: 0; }
+.page-head .version-filter { margin-top: 18px; }
+.chip[aria-current="true"] { color: #fff; }
+.chip[aria-current="true"]::before {
+  border-color: var(--cyan);
+  background: linear-gradient(180deg, rgba(39, 212, 255, 0.42), rgba(18, 100, 220, 0.45));
+  box-shadow: 0 0 14px rgba(39, 212, 255, 0.5), inset 0 0 10px rgba(39, 212, 255, 0.35);
+}
+.tab-group {
+  flex: none;
+  align-self: center;
+  padding: 2px 4px 2px 10px;
+  border-left: 3px solid var(--cyan);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--cyan);
+}
+.chart-tab-lineage { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: var(--text-3); }
+.lineage { margin: 0; padding-left: 14px; font-size: 14px; font-weight: 600; letter-spacing: 0.04em; color: var(--text-2); }
+.lineage-label { margin-right: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--cyan); }
+.lineage-anchor { scroll-margin-top: 80px; }
+.stat-record .stat-value { display: flex; align-items: baseline; gap: 10px; }
+.stat-record .grade { font-size: 0.9em; }
+.graph-part + .graph-part { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--edge-dim); }
+.graph-part-head { margin: 0 0 6px 14px; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--cyan); }
+.graph-note { margin: 8px 0 0 14px; font-size: 12.5px; color: var(--text-3); }
+.g-version { stroke: rgba(180, 140, 255, 0.65); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.g-version-label { font: italic 700 12px var(--font); letter-spacing: 0.06em; fill: #e6d9ff; paint-order: stroke; stroke: #030a1e; stroke-width: 4px; stroke-linejoin: round; }
+.lg-version { width: 0; height: 14px; border-left: 2px dashed rgba(180, 140, 255, 0.85); }
 
 /* ---------- Responsive ---------- */
 

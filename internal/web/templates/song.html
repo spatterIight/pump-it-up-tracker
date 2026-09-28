@@ -10,7 +10,7 @@
       {{if or .Artist .BPM}}<p class="song-sub">{{.Artist}}{{if and .Artist .BPM}} · {{end}}{{if .BPM}}{{.BPM}} BPM{{end}}</p>{{end}}
       <dl class="song-facts">
         <div><dt>Plays</dt><dd>{{len .Plays}}</dd></div>
-        <div><dt>Charts</dt><dd>{{len .Charts}}</dd></div>
+        <div><dt>Charts</dt><dd>{{len .Lineages}}</dd></div>
         <div><dt>First played</dt><dd>{{date (index .Plays 0).Date}}</dd></div>
         <div><dt>Last played</dt><dd>{{ago .LastPlayed}}</dd></div>
       </dl>
@@ -18,52 +18,66 @@
   </div>
 </section>
 
+{{$groups := .LineageGroups}}
+{{$headed := or (gt (len $groups) 1) (old .Version)}}
 <nav class="chart-tabs" role="tablist" aria-label="Charts">
-  {{range $i, $h := .Charts}}
-  <a class="chart-tab{{if eq $i 0}} is-active{{end}}" role="tab" href="#{{.Chart.Key}}" data-tab="{{.Chart.Key}}" aria-controls="{{.Chart.Key}}" aria-selected="{{if eq $i 0}}true{{else}}false{{end}}">
-    {{template "ball" .Chart}}
+  {{range $gi, $g := $groups}}
+  {{if $headed}}<span class="tab-group" role="presentation">{{.Version.Name}}</span>{{end}}
+  {{range $i, $l := .Lineages}}
+  {{$first := and (eq $gi 0) (eq $i 0)}}
+  <a class="chart-tab{{if $first}} is-active{{end}}" role="tab" href="#{{.Key}}" data-tab="{{.Key}}"{{with aliases .}} data-aliases="{{.}}"{{end}} aria-controls="{{.Key}}" aria-selected="{{if $first}}true{{else}}false{{end}}">
+    {{template "ball" .Newest.Chart}}
     <span class="chart-tab-text">
-      <span class="chart-tab-name">{{.Chart.Mode.Name}} {{.Chart.Ball}}</span>
-      <span class="chart-tab-best">{{if .Cleared}}{{template "grade" .Best.Grade}}<span>{{score .Best.Score}}</span>{{else}}{{template "not-cleared" (len .Plays)}}{{end}}</span>
+      <span class="chart-tab-name">{{.Newest.Chart.Mode.Name}} {{.Newest.Chart.Ball}}</span>
+      {{if .Linked}}<span class="chart-tab-lineage">{{chartsLabel .Charts}}</span>{{end}}
+      {{with .Record}}<span class="chart-tab-best">{{if .Cleared}}{{template "grade" .Best.Grade}}<span>{{score .Best.Score}}</span>{{else}}{{template "not-cleared" (len .Plays)}}{{end}}</span>{{end}}
     </span>
   </a>
   {{end}}
+  {{end}}
 </nav>
 
-{{range $i, $h := .Charts}}
-<section class="chart-panel{{if eq $i 0}} is-active{{end}}" id="{{.Chart.Key}}" data-panel="{{.Chart.Key}}" role="tabpanel" aria-label="{{.Chart}}">
-  <div class="panel-summary">
-    <div class="result m-{{.Chart.Mode.Class}}">
+{{range $gi, $g := $groups}}
+{{range $i, $l := .Lineages}}
+{{$first := and (eq $gi 0) (eq $i 0)}}
+{{$r := .Record}}
+{{$h := .Newest}}
+<section class="chart-panel{{if $first}} is-active{{end}}" id="{{.Key}}" data-panel="{{.Key}}" role="tabpanel" aria-label="{{chartsLabel .Charts}}">
+  {{if or .Linked (old $h.Version)}}
+  <p class="lineage">{{range .Charts}}{{if ne . $h}}<span class="lineage-anchor" id="{{.Key}}"></span>{{end}}{{end}}<span class="lineage-label">{{if .Linked}}Chart lineage{{else}}Version{{end}}</span> {{chartsLabel .Charts}}</p>
+  {{end}}
+  <div class="panel-summary" style="--stat-rows: {{statRows .}}">
+    <div class="result m-{{$h.Chart.Mode.Class}}">
       <div class="result-head">
-        {{template "ball" .Chart}}
+        {{template "ball" $h.Chart}}
         <span class="result-title">
-          <span class="stat-label">{{if .Cleared}}Personal best{{else if .Best}}Best attempt · not cleared yet{{else}}No result yet · not cleared{{end}}</span>
-          <span class="result-chart">{{.Chart.Mode.Name}} {{.Chart.Ball}}</span>
+          <span class="stat-label">{{if $r.Cleared}}Personal best{{else if $r.Best}}Best attempt · not cleared yet{{else}}No result yet · not cleared{{end}}</span>
+          <span class="result-chart">{{$h.Chart.Mode.Name}} {{$h.Chart.Ball}}</span>
         </span>
-        <span class="result-date">{{if .Best}}{{date .Best.Date}}{{else}}Last tried {{date .LastPlayed}}{{end}}</span>
+        <span class="result-date">{{if $r.Best}}{{date $r.Best.Date}}{{if ne $r.Best.History $h}} · {{$r.Best.Chart}} {{$r.Best.Version.Name}}{{end}}{{else}}Last tried {{date $r.LastPlayed}}{{end}}</span>
       </div>
-      {{if .Best}}
-      <div class="result-body{{if not .Best.Judgments}} no-judg{{end}}">
-        {{with .Best.Judgments}}
+      {{if $r.Best}}
+      <div class="result-body{{if not $r.Best.Judgments}} no-judg{{end}}">
+        {{with $r.Best.Judgments}}
         <ol class="jrows">
           <li class="jrow j-perfect"><span class="jl">Perfect</span><span class="jc">{{template "count" .Perfect}}</span></li>
           <li class="jrow j-great"><span class="jl">Great</span><span class="jc">{{template "count" .Great}}</span></li>
           <li class="jrow j-good"><span class="jl">Good</span><span class="jc">{{template "count" .Good}}</span></li>
           <li class="jrow j-bad"><span class="jl">Bad</span><span class="jc">{{template "count" .Bad}}</span></li>
           <li class="jrow j-miss"><span class="jl">Miss</span><span class="jc">{{template "count" .Miss}}</span></li>
-          {{if ge $h.Best.MaxCombo 0}}<li class="jrow j-combo"><span class="jl">Max combo</span><span class="jc">{{template "count" $h.Best.MaxCombo}}</span></li>{{end}}
+          {{if ge $r.Best.MaxCombo 0}}<li class="jrow j-combo"><span class="jl">Max combo</span><span class="jc">{{template "count" $r.Best.MaxCombo}}</span></li>{{end}}
         </ol>
         {{end}}
         <div class="result-side">
-          <div class="result-grade">{{if .Cleared}}{{template "grade" .Best.Grade}}{{else}}{{template "not-cleared" (len .Plays)}}{{end}}</div>
-          {{template "plate" .BestPlate}}
-          <div class="score-box"><small>Score</small><span>{{score .Best.Score}}</span></div>
+          <div class="result-grade">{{if $r.Cleared}}{{template "grade" $r.Best.Grade}}{{else}}{{template "not-cleared" (len $r.Plays)}}{{end}}</div>
+          {{template "plate" $r.BestPlate}}
+          <div class="score-box"><small>Score</small><span>{{score $r.Best.Score}}</span></div>
         </div>
       </div>
       {{else}}
       <div class="result-body no-judg">
         <div class="result-side">
-          <div class="result-grade">{{template "not-cleared" (len .Plays)}}</div>
+          <div class="result-grade">{{template "not-cleared" (len $r.Plays)}}</div>
           <div class="score-box"><small>Score</small><span title="No score">–</span></div>
         </div>
       </div>
@@ -72,8 +86,15 @@
     <div class="stat">
       <span class="stat-label">Attempts</span>
       <span class="stat-value">{{len .Plays}}</span>
-      <span class="stat-sub">{{if .Cleared}}{{plural .Clears "clear" "clears"}}{{else}}not cleared yet{{end}}{{if .Fails}} · {{plural .Fails "fail" "fails"}}{{end}}</span>
+      <span class="stat-sub">{{if .Clears}}{{plural .Clears "clear" "clears"}}{{else}}not cleared yet{{end}}{{if .Fails}} · {{plural .Fails "fail" "fails"}}{{end}}</span>
     </div>
+    {{range olderRecords .}}
+    <div class="stat stat-record">
+      <span class="stat-label">Best in {{versionNames .}}</span>
+      <span class="stat-value">{{if .Best}}{{template "grade" .Best.Grade}}<span>{{score .Best.Score}}</span>{{else}}–{{end}}</span>
+      <span class="stat-sub">{{chartNames .Charts}} · {{if .Cleared}}{{plural .Clears "clear" "clears"}}{{else}}not cleared{{end}}</span>
+    </div>
+    {{end}}
     {{if ge .FewestMisses 0}}
     <div class="stat">
       <span class="stat-label">Fewest misses</span>
@@ -116,7 +137,9 @@
       {{if .Breaks}}<span><i class="lg lg-break"></i>Stage break</span>{{end}}
       {{if .Failed}}<span><i class="lg lg-fail"></i>Failed, no score</span>{{end}}
       {{end}}
+      {{if .Linked}}<span><i class="lg lg-version"></i>Chart or version change</span>{{end}}
     </div>
+    {{if gt (len .Records) 1}}<p class="graph-note">Scores are drawn apart for each scoring system, since they do not compare; misses and perfect rates run across the whole lineage.</p>{{end}}
   </div>
 
   <div class="attempts">
@@ -127,6 +150,7 @@
         <div class="a-when">
           <span class="a-date">{{date .Date}}</span>
           {{if .HasTime}}<span class="a-time">{{clock .Date}}</span>{{end}}
+          {{if or $l.Linked (old .Version)}}<span class="a-chart">{{if $l.Linked}}{{.Chart}}{{end}}{{template "ver-old" .Version}}</span>{{end}}
         </div>
         <div class="a-score">
           <span class="a-score-num">{{template "play-score" .}}</span>
@@ -135,7 +159,7 @@
         {{if .HasScore}}
         <div class="a-grade">{{template "grade" .Grade}}{{template "plate" .Plate}}</div>
         {{else}}
-        <div class="a-grade"><span class="dash" title="No grade">–</span><span class="dash dash-plate" title="No plate">–</span></div>
+        <div class="a-grade"><span class="dash" title="No grade">–</span>{{if .Version.Scoring.HasPlates}}<span class="dash dash-plate" title="No plate">–</span>{{end}}</div>
         {{end}}
         <div class="a-judg">
           {{if not .HasScore}}<span class="dash dash-judg" title="No judgments">–</span>{{end}}
@@ -160,6 +184,7 @@
     </ol>
   </div>
 </section>
+{{end}}
 {{end}}
 {{end}}
 {{end}}

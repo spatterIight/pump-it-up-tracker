@@ -114,9 +114,29 @@ func validate(args []string) error {
 	if err != nil {
 		return err
 	}
-	s := t.Stats(time.Now())
-	fmt.Printf("%s is valid: %d plays of %d songs, %d of them failed\n", path, s.Plays, s.Songs, s.Fails)
+	fmt.Printf("%s is valid: %s\n", path, summary(t))
 	return nil
+}
+
+// summary describes what a data file holds: "56 plays of 40 songs (41
+// Phoenix, 15 Prime 2), 13 of them failed".
+func summary(t *tracker.Tracker) string {
+	counts := t.VersionCounts()
+	fails := 0
+	var versions []string
+	for _, c := range counts {
+		fails += c.Fails
+		versions = append(versions, fmt.Sprintf("%d %s", c.Plays, c.Version.Name))
+	}
+	s := fmt.Sprintf("%d plays of %d songs", len(t.Plays), len(t.Songs))
+	switch len(counts) {
+	case 0:
+	case 1:
+		s += " (all " + counts[0].Version.Name + ")"
+	default:
+		s += " (" + strings.Join(versions, ", ") + ")"
+	}
+	return s + fmt.Sprintf(", %d of them failed", fails)
 }
 
 func healthcheck() error {

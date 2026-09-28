@@ -13,3 +13,12 @@
 {{define "play-score"}}{{if .HasScore}}{{score .Score}}{{else}}<span title="No score">–</span>{{end}}{{end}}
 
 {{define "not-cleared"}}<span class="nc"><span class="nc-badge">Not cleared</span><span class="nc-count">{{plural . "attempt" "attempts"}}</span></span>{{end}}
+
+{{define "ver"}}<span class="ver" title="Pump It Up {{.Name}}">{{.Name}}</span>{{end}}
+
+{{define "ver-old"}}{{if old .}}{{template "ver" .}}{{end}}{{end}}
+
+{{define "version-filter"}}{{if gt (len .Played) 1}}<nav class="chips version-filter" aria-label="Game version">
+  <a class="chip" href="{{filterURL .Nav nil}}"{{if not .Filter}} aria-current="true"{{end}}>All versions</a>
+  {{range .Played}}<a class="chip" href="{{filterURL $.Nav .}}"{{if eq $.Filter .}} aria-current="true"{{end}}>{{.Name}}</a>{{end}}
+</nav>{{end}}{{end}}

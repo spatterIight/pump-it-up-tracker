@@ -36,10 +36,10 @@ func (s *Server) funcs() template.FuncMap {
 			}
 			return formatInt(n) + " " + many
 		},
-		"modes": func(song *tracker.Song) string {
+		"modes": func(charts []*tracker.ChartHistory) string {
 			seen := map[string]bool{}
 			var out []string
-			for _, h := range song.Charts {
+			for _, h := range charts {
 				c := h.Chart.Mode.Class()
 				if !seen[c] {
 					seen[c] = true
@@ -48,14 +48,13 @@ func (s *Server) funcs() template.FuncMap {
 			}
 			return strings.Join(out, " ")
 		},
-		"rank":        func(g tracker.Grade) int { return g.Rank() },
 		"search":      func(s *tracker.Song) string { return strings.ToLower(s.Title + " " + s.Artist) },
 		"reverse":     reversePlays,
 		"take":        func(n int, ps []*tracker.Play) []*tracker.Play { return ps[:min(n, len(ps))] },
 		"judgmentBar": judgmentBar,
 		"chart":       renderChart,
-		"hasJudgments": func(h *tracker.ChartHistory) bool {
-			for _, p := range h.Plays {
+		"hasJudgments": func(l *tracker.Lineage) bool {
+			for _, p := range l.Plays {
 				if p.Judgments != nil {
 					return true
 				}
@@ -63,18 +62,62 @@ func (s *Server) funcs() template.FuncMap {
 			return false
 		},
 		"legend": chartLegend,
+		// old reports whether a version is older than the newest one played,
+		// which is what gets a version badge.
+		"old":         func(v *tracker.Version) bool { return v != s.opts.Tracker.Current },
+		"chartsLabel": chartsLabel,
+		// chartNames names charts without their versions: "S7 → S8".
+		"chartNames": func(hs []*tracker.ChartHistory) string {
+			names := make([]string, len(hs))
+			for i, h := range hs {
+				names[i] = h.Chart.String()
+			}
+			return strings.Join(names, " → ")
+		},
+		// statRows counts the stat cards beside a chart's result, which the
+		// result spans.
+		"statRows": func(l *tracker.Lineage) int {
+			n := len(l.Records)
+			if l.FewestMisses >= 0 {
+				n++
+			}
+			if l.BestPerfectRate >= 0 {
+				n++
+			}
+			return max(n, 3)
+		},
+		// aliases are the keys of a lineage's older charts, which open its tab.
+		"aliases": func(l *tracker.Lineage) string {
+			var keys []string
+			for _, h := range l.Charts[:len(l.Charts)-1] {
+				keys = append(keys, h.Key())
+			}
+			return strings.Join(keys, " ")
+		},
+		"olderRecords": func(l *tracker.Lineage) []*tracker.Record { return l.Records[:len(l.Records)-1] },
+		"versionNames": func(r *tracker.Record) string {
+			var names []string
+			for _, v := range r.Versions() {
+				names = append(names, v.Name)
+			}
+			return strings.Join(names, " and ")
+		},
+		// filterURL links a list page narrowed to a version, nil for all.
+		"filterURL": func(nav string, v *tracker.Version) string {
+			u, frag := s.base+"/", "#songs"
+			if nav == "activity" {
+				u, frag = s.base+"/activity", ""
+			}
+			if v != nil {
+				u += "?version=" + v.ID
+			}
+			return u + frag
+		},
 		"gradeShare": func(n, total int) string {
 			if total == 0 {
 				return "0"
 			}
 			return strconv.FormatFloat(float64(n)*100/float64(total), 'f', 2, 64)
-		},
-		"clearedCharts": func(gs []tracker.GradeCount) int {
-			n := 0
-			for _, g := range gs {
-				n += g.Count
-			}
-			return n
 		},
 		"gradeClass": func(g tracker.Grade) string {
 			return strings.NewReplacer("+", "p").Replace(strings.ToLower(string(g)))
@@ -144,9 +187,9 @@ type legend struct {
 	Scores, Breaks, Failed bool
 }
 
-func chartLegend(h *tracker.ChartHistory) legend {
+func chartLegend(lin *tracker.Lineage) legend {
 	var l legend
-	for _, p := range h.Plays {
+	for _, p := range lin.Plays {
 		switch {
 		case !p.HasScore():
 			l.Failed = true

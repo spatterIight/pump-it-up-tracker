@@ -1,5 +1,5 @@
 {{define "content"}}
-{{if not .Songs}}
+{{if not .Cards}}
 <section class="empty-hero">
   {{padEmblem "empty-mark"}}
   <h1 class="display">No scores yet</h1>
@@ -18,7 +18,12 @@
   <div class="hero-head">
     <p class="eyebrow">Pump It Up score journal</p>
     <h1 class="display">{{if .Player}}{{.Player}}{{else}}Your scores{{end}}</h1>
-    <p class="lede">{{plural .Stats.Plays "play" "plays"}}{{if .Stats.Fails}} ({{.Stats.Fails}} failed){{end}} since {{date .Stats.FirstPlay}} · last played {{ago .Stats.LastPlay}}</p>
+    <p class="lede">{{plural .Stats.Plays "play" "plays"}}{{if .Stats.Fails}} ({{.Stats.Fails}} failed){{end}}{{if gt (len .Played) 1}} in {{.Stats.Version.Name}}{{end}} since {{date .Stats.FirstPlay}} · last played {{ago .Stats.LastPlay}}</p>
+    {{if gt (len .Stats.Versions) 1}}
+    <ul class="version-counts" aria-label="Plays by game version">
+      {{range .Stats.Versions}}<li><a href="{{filterURL "songs" .Version}}">{{template "ver" .Version}}<span>{{plural .Plays "play" "plays"}}</span></a></li>{{end}}
+    </ul>
+    {{end}}
   </div>
 
   <div class="stat-grid">
@@ -55,21 +60,23 @@
     {{end}}
   </div>
 
-  {{with .Stats.BestGrades}}
+  {{with .Stats}}{{if .ClearedCharts}}
   <div class="grade-dist">
     <div class="grade-dist-head">
       <span class="stat-label">Best grade per chart</span>
-      <span class="muted">{{plural (clearedCharts .) "cleared chart" "cleared charts"}}</span>
+      <span class="muted">{{plural .ClearedCharts "cleared chart" "cleared charts"}}</span>
     </div>
     <div class="grade-bar" role="img" aria-label="Distribution of best grades">
-      {{$total := clearedCharts .}}
-      {{range .}}<span class="gb-seg g-{{gradeClass .Grade}} tier-{{.Grade.Tier}}" style="flex-basis: {{gradeShare .Count $total}}%" title="{{.Grade}}: {{.Count}}"></span>{{end}}
+      {{$total := .ClearedCharts}}
+      {{range .BestGrades}}<span class="gb-seg g-{{gradeClass .Grade}} tier-{{.Grade.Tier}}" style="flex-basis: {{gradeShare .Count $total}}%" title="{{.Grade}}: {{.Count}}"></span>{{end}}
+      {{with .Ungraded}}<span class="gb-seg g-none" style="flex-basis: {{gradeShare . $total}}%" title="No grade logged: {{.}}"></span>{{end}}
     </div>
     <ul class="grade-legend">
-      {{range .}}<li><i class="gb-swatch g-{{gradeClass .Grade}}"></i>{{template "grade" .Grade}}<span>{{.Count}}</span></li>{{end}}
+      {{range .BestGrades}}<li><i class="gb-swatch g-{{gradeClass .Grade}}"></i>{{template "grade" .Grade}}<span>{{.Count}}</span></li>{{end}}
+      {{with .Ungraded}}<li><i class="gb-swatch g-none"></i>No grade logged<span>{{.}}</span></li>{{end}}
     </ul>
   </div>
-  {{end}}
+  {{end}}{{end}}
 </section>
 
 {{with .Latest}}
@@ -83,10 +90,10 @@
   </div>
   <div class="strip">
     {{range take 12 (reverse .Plays)}}
-    <a class="mini{{if .IsPB}} is-pb{{end}}{{if .Broken}} is-broken{{end}}" href="{{songURL .Song.Slug}}#{{.Chart.Key}}">
+    <a class="mini{{if .IsPB}} is-pb{{end}}{{if .Broken}} is-broken{{end}}" href="{{songURL .Song.Slug}}#{{.History.Lineage.Key}}">
       <img src="{{artURL .Song.Slug}}" alt="" loading="lazy" width="700" height="393">
       <span class="mini-shade"></span>
-      <span class="mini-top">{{template "ball" .Chart}}{{if .IsPB}}<span class="tag tag-pb">{{if .FirstClear}}Clear{{else}}PB{{end}}</span>{{end}}</span>
+      <span class="mini-top"><span class="mini-chart">{{template "ball" .Chart}}{{template "ver-old" .Version}}</span>{{if .IsPB}}<span class="tag tag-pb">{{if .FirstClear}}Clear{{else}}PB{{end}}</span>{{end}}</span>
       <span class="mini-body">
         <span class="mini-title">{{.Song.Title}}</span>
         <span class="mini-score">{{if .HasScore}}{{score .Score}}{{template "grade" .Grade}}{{else}}<span class="tag tag-fail">Failed</span>{{end}}</span>
@@ -101,8 +108,9 @@
   <div class="section-head">
     <div>
       <h2>Songs</h2>
-      <p class="muted"><span data-count>{{len .Songs}}</span> of {{plural (len .Songs) "song" "songs"}}</p>
+      <p class="muted"><span data-count>{{len .Cards}}</span> of {{plural (len .Cards) "song" "songs"}}{{with .Filter}} played in {{.Name}}{{end}}</p>
     </div>
+    {{template "version-filter" .}}
   </div>
   <div class="toolbar">
     <label class="search">
@@ -128,19 +136,20 @@
     </label>
   </div>
   <div class="grid" data-grid>
-    {{range .Songs}}
-    <a class="card" href="{{songURL .Slug}}" data-search="{{search .}}" data-title="{{.Title}}" data-modes="{{modes .}}" data-level="{{with .TopChart}}{{.Chart.Level}}{{end}}" data-last="{{unix .LastPlayed}}" data-grade="{{if .Cleared}}{{rank .BestGrade}}{{else}}0{{end}}" data-plays="{{len .Plays}}">
+    {{range .Cards}}
+    <a class="card" href="{{songURL .Song.Slug}}" data-search="{{search .Song}}" data-title="{{.Song.Title}}" data-modes="{{modes .Charts}}" data-level="{{with .Top}}{{.Chart.Level}}{{end}}" data-last="{{unix .Last}}" data-grade="{{.Rank}}" data-version="{{.Version.Order}}" data-plays="{{.Plays}}">
       <div class="card-art">
-        <span class="frame"><img src="{{artURL .Slug}}" alt="" loading="lazy" width="700" height="393"></span>
-        {{if .Cleared}}{{with .BestGrade}}<span class="card-grade">{{template "grade" .}}</span>{{end}}{{else}}<span class="card-grade card-nc">{{template "not-cleared" (len .Plays)}}</span>{{end}}
+        <span class="frame"><img src="{{artURL .Song.Slug}}" alt="" loading="lazy" width="700" height="393"></span>
+        {{if old .Version}}<span class="card-ver">{{template "ver" .Version}}</span>{{end}}
+        {{if .Cleared}}{{with .BestGrade}}<span class="card-grade">{{template "grade" .}}</span>{{end}}{{else}}<span class="card-grade card-nc">{{template "not-cleared" .Attempts}}</span>{{end}}
       </div>
       <div class="card-body">
-        <h3 class="card-title">{{.Title}}</h3>
-        {{if .Artist}}<p class="card-artist">{{.Artist}}</p>{{end}}
+        <h3 class="card-title">{{.Song.Title}}</h3>
+        {{if .Song.Artist}}<p class="card-artist">{{.Song.Artist}}</p>{{end}}
         <div class="card-balls">
-          {{range .Charts}}<span class="ball-wrap{{if not .Cleared}} is-uncleared{{end}}" title="{{.Chart}} · {{if .Cleared}}best {{score .Best.Score}} {{.Best.Grade}}{{else}}not cleared, {{plural (len .Plays) "attempt" "attempts"}}{{end}}">{{template "ball" .Chart}}</span>{{end}}
+          {{range .Charts}}<span class="ball-wrap{{if not .Record.Cleared}} is-uncleared{{end}}" title="{{.Chart}} · {{with .Record}}{{if .Cleared}}best {{score .Best.Score}}{{with .Best.Grade}} {{.}}{{end}}{{else}}not cleared, {{plural (len .Plays) "attempt" "attempts"}}{{end}}{{end}}">{{template "ball" .Chart}}</span>{{end}}
         </div>
-        <p class="card-meta">{{plural (len .Plays) "play" "plays"}} · {{ago .LastPlayed}}</p>
+        <p class="card-meta">{{plural .Plays "play" "plays"}} · {{ago .Last}}</p>
       </div>
     </a>
     {{end}}

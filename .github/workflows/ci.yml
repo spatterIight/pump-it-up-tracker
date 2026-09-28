@@ -76,8 +76,9 @@ jobs:
           done
           docker logs piu
           [ "$status" = healthy ] || { echo "container is $status"; exit 1; }
-          curl -fsS http://127.0.0.1:8080/api/data.json | grep -q '"plays": 36'
+          curl -fsS http://127.0.0.1:8080/api/data.json | grep -q '"plays": 38'
           curl -fsS http://127.0.0.1:8080/song/big-daddy | grep -q '938,204'
+          curl -fsS http://127.0.0.1:8080/song/le-grand-bleu | grep -q '1,038,500'
 
       - name: Validate data with the image
         run: |
