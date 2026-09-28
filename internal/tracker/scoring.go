@@ -8,7 +8,7 @@ import (
 
 // ScoringSystem is how a game version scores and grades a play. Versions
 // that share a scoring system share personal bests across chart links; see
-// README.md, "Adding a game version". Systems are compared with ==, so each
+// docs/development.md, "Adding a game version". Systems are compared with ==, so each
 // is a pointer or a value of a comparable type; a version list with any
 // other kind is refused.
 type ScoringSystem interface {
