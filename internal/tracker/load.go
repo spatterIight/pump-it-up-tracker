@@ -589,14 +589,6 @@ func build(data fileData, vs versionSet) (*Tracker, error) {
 			}
 		}
 
-		// The grade as logged, which the score is also checked against. A
-		// grade the version does not have is reported below.
-		var loggedGrade Grade
-		gradeKnown := false
-		if raw.Grade != "" && !noScore {
-			loggedGrade, gradeKnown = parseGrade(sys, raw.Grade)
-		}
-
 		if len(problems) == entryProblems && !noScore {
 			canReconcile := judgments != nil && maxCombo >= 0
 			switch {
@@ -611,11 +603,11 @@ func build(data fileData, vs versionSet) (*Tracker, error) {
 			default:
 				// A broken stage stops counting notes part-way through, so its
 				// result screen does not add up the same way.
-				r := Result{Chart: chart, Score: score, Grade: loggedGrade, MaxCombo: maxCombo}
+				var against *Judgments
 				if !raw.Broken {
-					r.Judgments = judgments
+					against = judgments
 				}
-				if err := sys.CheckScore(r); err != nil {
+				if err := sys.CheckScore(score, against, maxCombo); err != nil {
 					addf("%s: %v", where, err)
 				}
 			}
@@ -627,9 +619,9 @@ func build(data fileData, vs versionSet) (*Tracker, error) {
 			grade, gradeWorkedOut = sys.Grade(score, judgments)
 		}
 		if raw.Grade != "" && !noScore {
-			g := loggedGrade
+			g, ok := parseGrade(sys, raw.Grade)
 			switch {
-			case !gradeKnown:
+			case !ok:
 				addf("%s: grade %q is not a %s grade (%s)", where, raw.Grade, version.Name, gradeList(sys.Grades()))
 			case raw.Broken || !gradeWorkedOut:
 				grade = g

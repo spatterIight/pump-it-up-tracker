@@ -24,9 +24,11 @@ type ScoringSystem interface {
 	// ComputeScore works out the score the game awards for a set of judgments
 	// and max combo. It is only called when ComputesScores is true.
 	ComputeScore(j Judgments, maxCombo int) int
-	// CheckScore returns an error when a logged score cannot be right for
-	// the rest of its result.
-	CheckScore(r Result) error
+	// CheckScore returns an error when a logged score cannot be right. j is
+	// the judgments to check it against, or nil when the play has none or is
+	// a stage break, whose result screen does not add up the same way.
+	// maxCombo is -1 when not recorded.
+	CheckScore(score int, j *Judgments, maxCombo int) error
 	// Grades lists every grade the system awards, best first.
 	Grades() []Grade
 	// Grade returns the grade a result earns, from its score and, when they
@@ -42,19 +44,6 @@ type ScoringSystem interface {
 	HasPlates() bool
 }
 
-// Result is a result screen as logged, for checking its score.
-type Result struct {
-	Chart Chart
-	Score int
-	// Grade is empty when none was logged.
-	Grade Grade
-	// Judgments is nil when none were logged, and for a stage break, whose
-	// result screen does not add up the same way.
-	Judgments *Judgments
-	// MaxCombo is -1 when not recorded.
-	MaxCombo int
-}
-
 // PhoenixScoring scores and grades plays the way Pump It Up Phoenix does.
 var PhoenixScoring ScoringSystem = phoenixScoring{}
 
@@ -64,11 +53,11 @@ func (phoenixScoring) Name() string                               { return "Phoe
 func (phoenixScoring) MaxScore() int                              { return MaxScore }
 func (phoenixScoring) ComputesScores() bool                       { return true }
 func (phoenixScoring) ComputeScore(j Judgments, maxCombo int) int { return ComputeScore(j, maxCombo) }
-func (phoenixScoring) CheckScore(r Result) error {
-	if r.Judgments == nil || r.MaxCombo < 0 {
+func (phoenixScoring) CheckScore(score int, j *Judgments, maxCombo int) error {
+	if j == nil || maxCombo < 0 {
 		return nil
 	}
-	return checkScore(r.Score, *r.Judgments, r.MaxCombo)
+	return checkScore(score, *j, maxCombo)
 }
 func (phoenixScoring) Grades() []Grade { return phoenixGrades }
 func (phoenixScoring) Grade(score int, _ *Judgments) (Grade, bool) {

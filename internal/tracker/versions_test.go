@@ -446,64 +446,6 @@ func TestVersionList(t *testing.T) {
 	}
 }
 
-// Every real result screen falls within the range of scores its judgments,
-// max combo and grade allow. Six of them sit exactly on the lowest: the
-// screens whose score they fully determine.
-func TestLegacyScoreRangeFitsResultScreens(t *testing.T) {
-	_, entries := resultScreens(t)
-	exact := 0
-	for _, e := range entries {
-		j := e["judgments"].(map[string]any)
-		n := func(k string) int { return int(j[k].(float64)) }
-		r := Result{
-			Chart:     mustChart(t, e["chart"].(string)),
-			Score:     int(e["score"].(float64)),
-			Grade:     Grade(e["grade"].(string)),
-			Judgments: &Judgments{n("perfect"), n("great"), n("good"), n("bad"), n("miss")},
-			MaxCombo:  int(e["max_combo"].(float64)),
-		}
-		lo, hi := legacyScoreRange(r)
-		if r.Score < lo || r.Score > hi {
-			t.Errorf("%s %s: score %d is outside %d to %d", e["song"], e["chart"], r.Score, lo, hi)
-		}
-		if r.Score == lo {
-			exact++
-		}
-	}
-	if exact != 6 {
-		t.Errorf("%d result screens score the lowest their judgments allow, want 6", exact)
-	}
-}
-
-func TestLegacyScoreRangeCatchesTypos(t *testing.T) {
-	const judg = `"judgments": {"perfect": 496, "great": 31, "good": 2, "bad": 1, "miss": 0}`
-	entry := func(extra string) string {
-		return `{"schema_version": 1, "scores": [{"song": "Le Grand Bleu", "chart": "S7", "date": "2025-09-09", "version": "prime2", ` + extra + `}]}`
-	}
-	for extra, want := range map[string]string{
-		// A digit misread.
-		`"score": 1036500, "grade": "S", "max_combo": 460, ` + judg: "score 1036500 is lower than Prime 2 allows for its judgments and max combo and grade, which is at least 1038500",
-		// The S bonus is what takes it past 1,000,000.
-		`"score": 938500, "grade": "S", "max_combo": 460, ` + judg: "score 938500 is lower than Prime 2 allows for its judgments and max combo and grade, which is at least 1038500",
-		`"score": 938400, "max_combo": 460, ` + judg:               "score 938400 is lower than Prime 2 allows for its judgments and max combo, which is at least 938500",
-		// A digit too many.
-		`"score": 10385000, "grade": "S", "max_combo": 460, ` + judg: "score 10385000 is higher than Prime 2 allows for its judgments and max combo and grade, which is at most",
-		// Without the max combo, the one Bad could have broken the combo
-		// anywhere, which still leaves 427 hits past the 50th.
-		`"score": 900000, ` + judg: "score 900000 is lower than Prime 2 allows for its judgments, which is at least 938500",
-	} {
-		wantProblem(t, entry(extra), "scores[0] (Le Grand Bleu S7): "+want)
-	}
-	// Grades below S earn no bonus, which lowers the highest score.
-	wantProblem(t, entry(`"score": 2500000, "grade": "A", "max_combo": 460, `+judg), "is higher than Prime 2 allows")
-	load(t, entry(`"score": 2500000, "grade": "S", "max_combo": 460, `+judg))
-	// A stage break's result screen does not add up the same way: only its
-	// rounding is checked.
-	load(t, entry(`"score": 500000, "broken": true, "max_combo": 460, `+judg))
-	// Co-op scoring is not documented, so it has no highest score.
-	load(t, `{"schema_version": 1, "scores": [{"song": "Destination", "chart": "CoOp2", "date": "2025-09-09", "version": "xx", "score": 90000000, `+judg+`}]}`)
-}
-
 type slicedScoring struct {
 	ScoringSystem
 	extra []int
