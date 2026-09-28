@@ -189,6 +189,24 @@ func TestVersionBadgesAndFilter(t *testing.T) {
 	wantAll(t, "Prime 2 songs", filtered, "38 plays (7 failed) in Phoenix")
 }
 
+// A clear logged without a grade counts as a cleared chart, and sorts
+// above songs not cleared.
+func TestUngradedClears(t *testing.T) {
+	tr, err := tracker.Load(strings.NewReader(`{"schema_version": 1, "scores": [
+		{"song": "Vook", "chart": "S7", "date": "2026-07-30", "version": "xx", "score": 600000, "grade": "F"},
+		{"song": "Katkoi", "chart": "S7", "date": "2026-07-30", "version": "xx", "score": 600000},
+		{"song": "DUEL", "chart": "S13", "date": "2026-07-30", "version": "xx", "broken": true}
+	]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, home := get(t, serve(t, tr, "/"), "/")
+	wantAll(t, "home", home, "2 cleared charts", `title="No grade logged: 1"`, `<i class="gb-swatch g-none"></i>No grade logged<span>1</span>`,
+		`data-title="DUEL" data-modes="single" data-level="13" data-last="1785369600" data-grade="0"`,
+		`data-title="Katkoi" data-modes="single" data-level="7" data-last="1785369600" data-grade="101"`,
+		`data-title="Vook" data-modes="single" data-level="7" data-last="1785369600" data-grade="102"`)
+}
+
 func TestAPIVersions(t *testing.T) {
 	h := newTestServer(t, "/")
 	resp, body := get(t, h, "/api/data.json")

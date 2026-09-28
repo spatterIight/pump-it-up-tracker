@@ -172,7 +172,8 @@ type songCard struct {
 	Attempts int
 	Last     time.Time
 	// Rank orders cards by best grade: the newest version's first, then by
-	// grade within a version. It is 0 for a song not cleared.
+	// grade within a version, with a clear logged without a grade last. It
+	// is 0 for a song not cleared.
 	Rank int
 }
 
@@ -235,7 +236,7 @@ func (s *Server) cards(filter *tracker.Version) []songCard {
 		c.BestGrade = song.BestGradeIn(c.Version)
 		c.Top = song.TopChartIn(c.Version)
 		if c.Cleared {
-			c.Rank = tracker.GradeRank(c.Version.Scoring, c.BestGrade)
+			c.Rank = 1 + tracker.GradeRank(c.Version.Scoring, c.BestGrade)
 			for _, v := range t.Versions {
 				if v.Before(c.Version) {
 					c.Rank += 100

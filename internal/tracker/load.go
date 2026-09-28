@@ -467,6 +467,12 @@ func build(data fileData, vs versionSet) (*Tracker, error) {
 		if title != "" {
 			where = fmt.Sprintf("scores[%d] (%s %s)", i, title, strings.TrimSpace(string(raw.Chart)))
 		}
+		// The chart the entry is a play of, when it names one, even if the
+		// entry has other mistakes.
+		id, identified := identify(raw, vs, defaultVersion)
+		if identified {
+			logged[id] = true
+		}
 		if len(decodeProblems) > 0 {
 			for _, p := range decodeProblems {
 				addf("%s: %s", where, p)
@@ -500,11 +506,6 @@ func build(data fileData, vs versionSet) (*Tracker, error) {
 				continue
 			}
 			version = v
-		}
-		id := chartID{strings.ToLower(title), version, chart}
-		identified := len(problems) == entryProblems
-		if identified {
-			logged[id] = true
 		}
 		sys := version.Scoring
 		canCompute := computesScores(sys)
@@ -766,6 +767,20 @@ func gradeList(gs []Grade) string {
 		names[i] = string(g)
 	}
 	return strings.Join(names, ", ")
+}
+
+// identify works out the chart an entry is a play of: its song, version and
+// chart. ok is false when the entry does not name all three correctly.
+func identify(raw scoreData, vs versionSet, defaultVersion *Version) (id chartID, ok bool) {
+	title := strings.TrimSpace(string(raw.Song))
+	chart, err := ParseChart(string(raw.Chart))
+	version := defaultVersion
+	if strings.TrimSpace(string(raw.Version)) != "" {
+		if version, ok = vs.lookup(string(raw.Version)); !ok {
+			return chartID{}, false
+		}
+	}
+	return chartID{strings.ToLower(title), version, chart}, title != "" && err == nil
 }
 
 // computesScores reports whether a scoring system works out scores from

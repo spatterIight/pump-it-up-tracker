@@ -23,12 +23,24 @@ type Stats struct {
 	Kcal      float64
 	FirstPlay time.Time
 	LastPlay  time.Time
-	// BestGrades counts, per grade, the charts whose best play earned it,
-	// best grade first. Grades no chart has are left out.
+	// BestGrades counts, per grade, the cleared charts whose best play
+	// earned it, best grade first. Grades no chart has are left out.
 	BestGrades []GradeCount
+	// Ungraded counts the cleared charts whose best play has no grade: one
+	// of a version whose grades are not worked out, logged without one.
+	Ungraded int
 
 	// Versions counts the plays of every version played, newest first.
 	Versions []VersionCount
+}
+
+// ClearedCharts counts the cleared charts in the headline version.
+func (s Stats) ClearedCharts() int {
+	n := s.Ungraded
+	for _, g := range s.BestGrades {
+		n += g.Count
+	}
+	return n
 }
 
 // GradeCount is how many charts have a grade as their best.
@@ -81,7 +93,11 @@ func (t *Tracker) Stats(now time.Time) Stats {
 		for _, h := range charts {
 			s.Charts++
 			if r := h.Record; r.Best != nil && r.Cleared {
-				counts[r.Best.Grade]++
+				if r.Best.Grade == "" {
+					s.Ungraded++
+				} else {
+					counts[r.Best.Grade]++
+				}
 			}
 			if h.Clears == 0 {
 				continue

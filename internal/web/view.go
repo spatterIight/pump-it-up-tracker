@@ -119,13 +119,6 @@ func (s *Server) funcs() template.FuncMap {
 			}
 			return strconv.FormatFloat(float64(n)*100/float64(total), 'f', 2, 64)
 		},
-		"clearedCharts": func(gs []tracker.GradeCount) int {
-			n := 0
-			for _, g := range gs {
-				n += g.Count
-			}
-			return n
-		},
 		"gradeClass": func(g tracker.Grade) string {
 			return strings.NewReplacer("+", "p").Replace(strings.ToLower(string(g)))
 		},

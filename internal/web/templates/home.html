@@ -60,21 +60,23 @@
     {{end}}
   </div>
 
-  {{with .Stats.BestGrades}}
+  {{with .Stats}}{{if .ClearedCharts}}
   <div class="grade-dist">
     <div class="grade-dist-head">
       <span class="stat-label">Best grade per chart</span>
-      <span class="muted">{{plural (clearedCharts .) "cleared chart" "cleared charts"}}</span>
+      <span class="muted">{{plural .ClearedCharts "cleared chart" "cleared charts"}}</span>
     </div>
     <div class="grade-bar" role="img" aria-label="Distribution of best grades">
-      {{$total := clearedCharts .}}
-      {{range .}}<span class="gb-seg g-{{gradeClass .Grade}} tier-{{.Grade.Tier}}" style="flex-basis: {{gradeShare .Count $total}}%" title="{{.Grade}}: {{.Count}}"></span>{{end}}
+      {{$total := .ClearedCharts}}
+      {{range .BestGrades}}<span class="gb-seg g-{{gradeClass .Grade}} tier-{{.Grade.Tier}}" style="flex-basis: {{gradeShare .Count $total}}%" title="{{.Grade}}: {{.Count}}"></span>{{end}}
+      {{with .Ungraded}}<span class="gb-seg g-none" style="flex-basis: {{gradeShare . $total}}%" title="No grade logged: {{.}}"></span>{{end}}
     </div>
     <ul class="grade-legend">
-      {{range .}}<li><i class="gb-swatch g-{{gradeClass .Grade}}"></i>{{template "grade" .Grade}}<span>{{.Count}}</span></li>{{end}}
+      {{range .BestGrades}}<li><i class="gb-swatch g-{{gradeClass .Grade}}"></i>{{template "grade" .Grade}}<span>{{.Count}}</span></li>{{end}}
+      {{with .Ungraded}}<li><i class="gb-swatch g-none"></i>No grade logged<span>{{.}}</span></li>{{end}}
     </ul>
   </div>
-  {{end}}
+  {{end}}{{end}}
 </section>
 
 {{with .Latest}}

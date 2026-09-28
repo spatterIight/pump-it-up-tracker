@@ -357,11 +357,35 @@ func TestInvalidLinks(t *testing.T) {
 	for scores, want := range cases {
 		wantProblem(t, doc(scores), want)
 	}
-	// A link to a chart whose only play has a mistake names just the mistake.
-	ps := problems(t, doc(`{"song": "Katkoi", "chart": "S7", "date": "2025-08-06", "version": "prime2", "score": 646650},
-		{"song": "Katkoi", "chart": "S8", "date": "2026-09-01", "score": 900000, "continues": {"version": "prime2", "chart": "S7"}}`))
-	if len(ps) != 1 || !strings.Contains(ps[0], "not a multiple of 100") {
-		t.Errorf("problems = %q", ps)
+	// A link to a chart whose only play has a mistake names just the mistake,
+	// whatever the mistake is.
+	for target, mistake := range map[string]string{
+		`"score": 646650`:                       "not a multiple of 100",
+		`"score": 646600, "date": "2025-13-45"`: `date "2025-13-45" is not in a recognised format`,
+		`"score": "abc"`:                        `score: expected a whole number, got "abc"`,
+		`"score": 646600, "plate": "TG"`:        "plate is not used in Prime 2",
+	} {
+		ps := problems(t, doc(`{"song": "Katkoi", "chart": "S7", "date": "2025-08-06", "version": "prime2", `+target+`},
+			{"song": "Katkoi", "chart": "S8", "date": "2026-09-01", "score": 900000, "continues": {"version": "prime2", "chart": "S7"}}`))
+		if len(ps) != 1 || !strings.Contains(ps[0], mistake) {
+			t.Errorf("%s: problems = %q", target, ps)
+		}
+	}
+}
+
+// A clear logged without a grade still counts as a cleared chart.
+func TestUngradedClears(t *testing.T) {
+	tr := load(t, `{"schema_version": 1, "scores": [
+		{"song": "Vook", "chart": "S7", "date": "2026-07-30", "version": "xx", "score": 600000, "grade": "S"},
+		{"song": "Katkoi", "chart": "S7", "date": "2026-07-30", "version": "xx", "score": 600000},
+		{"song": "DUEL", "chart": "S13", "date": "2026-07-30", "version": "xx", "broken": true}
+	]}`)
+	s := tr.Stats(mustDate(t, "2026-07-30"))
+	if s.Charts != 3 || len(s.BestGrades) != 1 || s.BestGrades[0] != (GradeCount{"S", 1}) || s.Ungraded != 1 || s.ClearedCharts() != 2 {
+		t.Errorf("stats = %+v, cleared %d", s, s.ClearedCharts())
+	}
+	if g := tr.Songs[1].BestGrade(); tr.Songs[1].Title != "Katkoi" || g != "" || !tr.Songs[1].Cleared() {
+		t.Errorf("Katkoi = cleared %v, grade %q", tr.Songs[1].Cleared(), g)
 	}
 }
 
