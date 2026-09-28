@@ -18,7 +18,7 @@
   <div class="hero-head">
     <p class="eyebrow">Pump It Up score journal</p>
     <h1 class="display">{{if .Player}}{{.Player}}{{else}}Your scores{{end}}</h1>
-    <p class="lede">{{plural .Stats.Plays "play" "plays"}} since {{date .Stats.FirstPlay}} · last played {{ago .Stats.LastPlay}}</p>
+    <p class="lede">{{plural .Stats.Plays "play" "plays"}}{{if .Stats.Fails}} ({{.Stats.Fails}} failed){{end}} since {{date .Stats.FirstPlay}} · last played {{ago .Stats.LastPlay}}</p>
   </div>
 
   <div class="stat-grid">
@@ -89,7 +89,7 @@
       <span class="mini-top">{{template "ball" .Chart}}{{if .IsPB}}<span class="tag tag-pb">{{if .FirstClear}}Clear{{else}}PB{{end}}</span>{{end}}</span>
       <span class="mini-body">
         <span class="mini-title">{{.Song.Title}}</span>
-        <span class="mini-score">{{score .Score}}{{template "grade" .Grade}}</span>
+        <span class="mini-score">{{if .HasScore}}{{score .Score}}{{template "grade" .Grade}}{{else}}<span class="tag tag-fail">Failed</span>{{end}}</span>
       </span>
     </a>
     {{end}}
@@ -129,16 +129,16 @@
   </div>
   <div class="grid" data-grid>
     {{range .Songs}}
-    <a class="card" href="{{songURL .Slug}}" data-search="{{search .}}" data-title="{{.Title}}" data-modes="{{modes .}}" data-level="{{with .TopChart}}{{.Chart.Level}}{{end}}" data-last="{{unix .LastPlayed}}" data-grade="{{rank .BestGrade}}" data-plays="{{len .Plays}}">
+    <a class="card" href="{{songURL .Slug}}" data-search="{{search .}}" data-title="{{.Title}}" data-modes="{{modes .}}" data-level="{{with .TopChart}}{{.Chart.Level}}{{end}}" data-last="{{unix .LastPlayed}}" data-grade="{{if .Cleared}}{{rank .BestGrade}}{{else}}0{{end}}" data-plays="{{len .Plays}}">
       <div class="card-art">
         <span class="frame"><img src="{{artURL .Slug}}" alt="" loading="lazy" width="700" height="393"></span>
-        {{with .BestGrade}}<span class="card-grade">{{template "grade" .}}</span>{{end}}
+        {{if .Cleared}}{{with .BestGrade}}<span class="card-grade">{{template "grade" .}}</span>{{end}}{{else}}<span class="card-grade card-nc">{{template "not-cleared" (len .Plays)}}</span>{{end}}
       </div>
       <div class="card-body">
         <h3 class="card-title">{{.Title}}</h3>
         {{if .Artist}}<p class="card-artist">{{.Artist}}</p>{{end}}
         <div class="card-balls">
-          {{range .Charts}}<span class="ball-wrap{{if not .Cleared}} is-uncleared{{end}}" title="{{.Chart}} · best {{score .Best.Score}} {{.Best.Grade}}{{if not .Cleared}} (not cleared){{end}}">{{template "ball" .Chart}}</span>{{end}}
+          {{range .Charts}}<span class="ball-wrap{{if not .Cleared}} is-uncleared{{end}}" title="{{.Chart}} · {{if .Cleared}}best {{score .Best.Score}} {{.Best.Grade}}{{else}}not cleared, {{plural (len .Plays) "attempt" "attempts"}}{{end}}">{{template "ball" .Chart}}</span>{{end}}
         </div>
         <p class="card-meta">{{plural (len .Plays) "play" "plays"}} · {{ago .LastPlayed}}</p>
       </div>

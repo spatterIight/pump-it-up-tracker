@@ -62,6 +62,7 @@ func (s *Server) funcs() template.FuncMap {
 			}
 			return false
 		},
+		"legend": chartLegend,
 		"gradeShare": func(n, total int) string {
 			if total == 0 {
 				return "0"
@@ -136,6 +137,26 @@ func reversePlays(ps []*tracker.Play) []*tracker.Play {
 		out[len(ps)-1-i] = p
 	}
 	return out
+}
+
+// legend says which kinds of marks a chart history's graph has.
+type legend struct {
+	Scores, Breaks, Failed bool
+}
+
+func chartLegend(h *tracker.ChartHistory) legend {
+	var l legend
+	for _, p := range h.Plays {
+		switch {
+		case !p.HasScore():
+			l.Failed = true
+		case p.Broken:
+			l.Scores, l.Breaks = true, true
+		default:
+			l.Scores = true
+		}
+	}
+	return l
 }
 
 // judgmentBar draws the judgment counts as one stacked bar.

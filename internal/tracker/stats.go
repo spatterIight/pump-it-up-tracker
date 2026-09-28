@@ -4,7 +4,9 @@ import "time"
 
 // Stats summarises the whole score log.
 type Stats struct {
-	Plays  int
+	Plays int
+	// Fails counts stage-broken plays, with or without a score.
+	Fails  int
 	Songs  int
 	Charts int
 	// PBsRecent counts personal bests set in the 30 days up to now.
@@ -41,6 +43,9 @@ func (t *Tracker) Stats(now time.Time) Stats {
 		}
 		if p.Kcal >= 0 {
 			s.Kcal = max(s.Kcal, 0) + p.Kcal
+		}
+		if p.Broken {
+			s.Fails++
 		}
 	}
 	counts := map[Grade]int{}

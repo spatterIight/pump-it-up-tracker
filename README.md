@@ -13,6 +13,8 @@ You log each result screen as a few lines of YAML in your Ansible variables. The
 | Song page | Activity |
 | --- | --- |
 | ![Song page](docs/screenshots/song.jpg) | ![Activity page](docs/screenshots/activity.jpg) |
+| **Songs not cleared yet** | **A chart not cleared yet** |
+| ![Songs list with songs not cleared yet](docs/screenshots/songs.jpg) | ![Song page with only failed plays](docs/screenshots/failed.jpg) |
 
 ## Logging a result screen
 
@@ -33,6 +35,18 @@ piu_tracker_scores:
 
 Only `song`, `chart` and `date` are always required. Everything else is optional, as long as there is either a `score` or both `judgments` and `max_combo` to work it out from. Add `broken: true` for a stage break.
 
+### Failed plays
+
+When you fail a chart and the result screen shows `-` instead of a score, log the play with `broken: true` and no result:
+
+```yaml
+  - {song: DUEL, chart: S13, date: "2026-09-08", broken: true}
+```
+
+Such a play may only have `song`, `chart`, `date`, `kcal` and `note`. It has no score or grade, and never counts as a clear or a personal best. It shows as "Failed" in the attempts table and the activity list, and as a marker along the bottom of the progress chart. A song or chart with no clear yet shows "Not cleared" with its number of attempts instead of a grade.
+
+A stage break that still shows a score is logged with `broken: true` and its score (or judgments and max combo).
+
 ### Typo checks
 
 Every entry is checked before it is shown. A deploy with a mistake in it fails and names the entry:
@@ -41,6 +55,7 @@ Every entry is checked before it is shown. A deploy with a mistake in it fails a
 
   `1,000,000 × (0.995 × (Perfect + 0.6·Great + 0.2·Good + 0.1·Bad) + 0.005 × MaxCombo) / Notes`
 - **Grade against score.** A `grade`, if given, must match the Phoenix grade table. Grades are worked out from the score otherwise.
+- **Failed plays.** A `broken: true` play with no score cannot have a `grade`, `plate`, `judgments` or `max_combo`. Without `broken: true`, a play with no score is rejected.
 - **Everything else:** chart notation, dates, plate names, and unknown keys (such as `perfects:`) are rejected with an explanation.
 
 > [!IMPORTANT]
@@ -55,7 +70,10 @@ The role writes the variables to a JSON file that this app reads (`schema_versio
   "schema_version": 1,
   "player": { "name": "PUMP IT UP" },
   "songs": { "Conflict": { "artist": "Siromaru + Cranky", "bpm": "160", "image": "" } },
-  "scores": [ { "song": "Big Daddy", "chart": "S11", "date": "2026-09-28", "score": 938204 } ]
+  "scores": [
+    { "song": "Big Daddy", "chart": "S11", "date": "2026-09-28", "score": 938204 },
+    { "song": "DUEL", "chart": "S13", "date": "2026-09-08", "broken": true }
+  ]
 }
 ```
 
@@ -91,7 +109,7 @@ The container is configured through environment variables:
 
 Endpoints besides the UI:
 - `/healthz` is used by the container healthcheck.
-- `/api/data.json` is a machine-readable summary of what was loaded.
+- `/api/data.json` is a machine-readable summary of what was loaded: per chart, the best play (`null` if none has a score), clear and fail counts, and every play, with `score` and `grade` `null` for a fail with no result.
 
 ## Running it
 
@@ -108,6 +126,7 @@ docker run --rm -p 8080:8080 \
 
 # Check a data file without starting the server
 go run ./cmd/pump-it-up-tracker validate path/to/tracker.json
+# path/to/tracker.json is valid: 36 plays of 15 songs, 7 of them failed
 ```
 
 The image is a static binary on `distroless/static:nonroot` (about 20 MB). It runs with a read-only root filesystem and no capabilities.

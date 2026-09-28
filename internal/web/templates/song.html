@@ -24,7 +24,7 @@
     {{template "ball" .Chart}}
     <span class="chart-tab-text">
       <span class="chart-tab-name">{{.Chart.Mode.Name}} {{.Chart.Ball}}</span>
-      <span class="chart-tab-best">{{template "grade" .Best.Grade}}<span>{{score .Best.Score}}</span></span>
+      <span class="chart-tab-best">{{if .Cleared}}{{template "grade" .Best.Grade}}<span>{{score .Best.Score}}</span>{{else}}{{template "not-cleared" (len .Plays)}}{{end}}</span>
     </span>
   </a>
   {{end}}
@@ -37,11 +37,12 @@
       <div class="result-head">
         {{template "ball" .Chart}}
         <span class="result-title">
-          <span class="stat-label">{{if .Cleared}}Personal best{{else}}Best attempt · not cleared yet{{end}}</span>
+          <span class="stat-label">{{if .Cleared}}Personal best{{else if .Best}}Best attempt · not cleared yet{{else}}No result yet · not cleared{{end}}</span>
           <span class="result-chart">{{.Chart.Mode.Name}} {{.Chart.Ball}}</span>
         </span>
-        <span class="result-date">{{date .Best.Date}}</span>
+        <span class="result-date">{{if .Best}}{{date .Best.Date}}{{else}}Last tried {{date .LastPlayed}}{{end}}</span>
       </div>
+      {{if .Best}}
       <div class="result-body{{if not .Best.Judgments}} no-judg{{end}}">
         {{with .Best.Judgments}}
         <ol class="jrows">
@@ -54,16 +55,24 @@
         </ol>
         {{end}}
         <div class="result-side">
-          <div class="result-grade">{{template "grade" .Best.Grade}}</div>
+          <div class="result-grade">{{if .Cleared}}{{template "grade" .Best.Grade}}{{else}}{{template "not-cleared" (len .Plays)}}{{end}}</div>
           {{template "plate" .BestPlate}}
           <div class="score-box"><small>Score</small><span>{{score .Best.Score}}</span></div>
         </div>
       </div>
+      {{else}}
+      <div class="result-body no-judg">
+        <div class="result-side">
+          <div class="result-grade">{{template "not-cleared" (len .Plays)}}</div>
+          <div class="score-box"><small>Score</small><span title="No score">–</span></div>
+        </div>
+      </div>
+      {{end}}
     </div>
     <div class="stat">
       <span class="stat-label">Attempts</span>
       <span class="stat-value">{{len .Plays}}</span>
-      <span class="stat-sub">{{if .Cleared}}cleared{{else}}not cleared yet{{end}}</span>
+      <span class="stat-sub">{{if .Cleared}}{{plural .Clears "clear" "clears"}}{{else}}not cleared yet{{end}}{{if .Fails}} · {{plural .Fails "fail" "fails"}}{{end}}</span>
     </div>
     {{if ge .FewestMisses 0}}
     <div class="stat">
@@ -98,10 +107,15 @@
     <div class="graph" data-graph="perfect">{{chart . "perfect"}}</div>
     {{end}}
     <div class="graph-legend">
+      {{with legend .}}
+      {{if .Scores}}
       <span><i class="lg lg-line"></i>Each play</span>
       <span><i class="lg lg-best"></i>Best so far</span>
       <span><i class="lg lg-pb"></i>New best</span>
-      <span><i class="lg lg-break"></i>Stage break</span>
+      {{end}}
+      {{if .Breaks}}<span><i class="lg lg-break"></i>Stage break</span>{{end}}
+      {{if .Failed}}<span><i class="lg lg-fail"></i>Failed, no score</span>{{end}}
+      {{end}}
     </div>
   </div>
 
@@ -109,17 +123,22 @@
     <h2 class="attempts-title">Attempts <span class="muted">newest first</span></h2>
     <ol class="attempt-list">
       {{range reverse .Plays}}
-      <li class="attempt{{if .IsPB}} is-pb{{end}}{{if .Broken}} is-broken{{end}}">
+      <li class="attempt{{if .IsPB}} is-pb{{end}}{{if .Broken}} is-broken{{end}}{{if not .HasScore}} is-failed{{end}}">
         <div class="a-when">
           <span class="a-date">{{date .Date}}</span>
           {{if .HasTime}}<span class="a-time">{{clock .Date}}</span>{{end}}
         </div>
         <div class="a-score">
-          <span class="a-score-num">{{score .Score}}</span>
+          <span class="a-score-num">{{template "play-score" .}}</span>
           {{template "delta" .}}
         </div>
+        {{if .HasScore}}
         <div class="a-grade">{{template "grade" .Grade}}{{template "plate" .Plate}}</div>
+        {{else}}
+        <div class="a-grade"><span class="dash" title="No grade">–</span><span class="dash dash-plate" title="No plate">–</span></div>
+        {{end}}
         <div class="a-judg">
+          {{if not .HasScore}}<span class="dash dash-judg" title="No judgments">–</span>{{end}}
           {{with .Judgments}}
           <div class="j-nums">
             <span class="jn j-perfect"><i>Perfect</i><b>{{template "count" .Perfect}}</b></span>

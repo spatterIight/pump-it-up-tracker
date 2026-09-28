@@ -461,44 +461,6 @@
       },
       "max_combo": 294,
       "kcal": 31.137
-    },
-    {
-      "song": "DUEL",
-      "chart": "S13",
-      "date": "2026-09-08",
-      "broken": true
-    },
-    {
-      "song": "DUEL",
-      "chart": "S13",
-      "date": "2026-09-27 20:30",
-      "broken": true,
-      "note": "lost it in the last run again"
-    },
-    {
-      "song": "Break Through Myself feat. Risa Yuzuki",
-      "chart": "S12",
-      "date": "2026-09-03",
-      "broken": true
-    },
-    {
-      "song": "After a thousand years",
-      "chart": "S12",
-      "date": "2026-08-24",
-      "broken": true
-    },
-    {
-      "song": "wither garden",
-      "chart": "S11",
-      "date": "2026-08-24",
-      "broken": true
-    },
-    {
-      "song": "Vook",
-      "chart": "S12",
-      "date": "2026-09-27 20:50",
-      "broken": true,
-      "kcal": 14.2
     }
   ]
 }

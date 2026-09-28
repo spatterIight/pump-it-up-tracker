@@ -75,6 +75,9 @@ type chartPoint struct {
 	v      float64
 	play   *tracker.Play
 	isBest bool
+	// failed marks a fail with no result: it has no value, so it is drawn
+	// as a marker on the bottom edge rather than as a point of the line.
+	failed bool
 }
 
 // renderChart plots a chart history by the named metric as SVG.
@@ -91,9 +94,17 @@ func renderChart(h *tracker.ChartHistory, key string) template.HTML {
 }
 
 func renderLayout(h *tracker.ChartHistory, m metric, l layout) string {
-	var pts []*chartPoint
+	// slots are the plays along the x axis, in order: pts those with a
+	// value, fails those without a result.
+	var slots, pts, fails []*chartPoint
 	best, haveBest := 0.0, false
 	for _, p := range h.Plays {
+		if !p.HasScore() {
+			cp := &chartPoint{play: p, failed: true}
+			slots = append(slots, cp)
+			fails = append(fails, cp)
+			continue
+		}
 		v, ok := m.value(p)
 		if !ok {
 			continue
@@ -105,22 +116,31 @@ func renderLayout(h *tracker.ChartHistory, m metric, l layout) string {
 			cp.isBest = true
 			best, haveBest = v, true
 		}
+		slots = append(slots, cp)
 		pts = append(pts, cp)
 	}
-	if len(pts) == 0 {
+	if len(slots) == 0 {
 		return ""
 	}
 
 	plotW, plotH := l.plotW(), l.plotH()
-	lo, hi := domain(m, pts)
+	bottom := l.padT + plotH
+	lo, hi := 0.0, 1.0
+	if len(pts) > 0 {
+		lo, hi = domain(m, pts)
+	}
 	yOf := func(v float64) float64 { return l.padT + (1-(v-lo)/(hi-lo))*plotH }
-	for i, p := range pts {
-		if len(pts) == 1 {
+	for i, p := range slots {
+		if len(slots) == 1 {
 			p.x = l.padL + plotW/2
 		} else {
-			p.x = l.padL + l.inset + float64(i)*(plotW-2*l.inset)/float64(len(pts)-1)
+			p.x = l.padL + l.inset + float64(i)*(plotW-2*l.inset)/float64(len(slots)-1)
 		}
-		p.y = yOf(p.v)
+		if p.failed {
+			p.y = bottom
+		} else {
+			p.y = yOf(p.v)
+		}
 	}
 
 	id := "g-" + h.Chart.Key() + "-" + m.key + "-" + l.name
@@ -132,20 +152,24 @@ func renderLayout(h *tracker.ChartHistory, m metric, l layout) string {
 
 	fmt.Fprintf(&b, `<rect class="g-frame" x="%g" y="%g" width="%g" height="%g" rx="10"/>`, l.padL, l.padT, plotW, plotH)
 
-	if m.grades {
-		writeGradeBands(&b, l, lo, hi, yOf)
-	}
-	for _, t := range ticks(lo, hi, 4) {
-		y := yOf(t)
-		if !m.grades {
-			fmt.Fprintf(&b, `<line class="g-grid" x1="%g" x2="%g" y1="%.1f" y2="%.1f"/>`, l.padL, l.padL+plotW, y, y)
+	if len(pts) == 0 {
+		// Only fails: there is nothing to put on a y axis.
+		fmt.Fprintf(&b, `<text class="g-empty" x="%g" y="%g" text-anchor="middle">Not cleared yet</text>`, l.padL+plotW/2, l.padT+plotH/2+6)
+	} else {
+		if m.grades {
+			writeGradeBands(&b, l, lo, hi, yOf)
 		}
-		fmt.Fprintf(&b, `<text class="g-axis" x="%g" y="%.1f" text-anchor="end">%s</text>`, l.padL-8, y+4.5, m.axis(t))
+		for _, t := range ticks(lo, hi, 4) {
+			y := yOf(t)
+			if !m.grades {
+				fmt.Fprintf(&b, `<line class="g-grid" x1="%g" x2="%g" y1="%.1f" y2="%.1f"/>`, l.padL, l.padL+plotW, y, y)
+			}
+			fmt.Fprintf(&b, `<text class="g-axis" x="%g" y="%.1f" text-anchor="end">%s</text>`, l.padL-8, y+4.5, m.axis(t))
+		}
 	}
-	writeDates(&b, l, pts)
+	writeDates(&b, l, slots)
 
 	if len(pts) > 1 {
-		bottom := l.padT + plotH
 		var area, line strings.Builder
 		fmt.Fprintf(&area, "M%.1f %.1f", pts[0].x, bottom)
 		for i, p := range pts {
@@ -177,6 +201,15 @@ func renderLayout(h *tracker.ChartHistory, m metric, l layout) string {
 			`<circle class="pt-hit" cx="%.1f" cy="%.1f" r="16"/><circle class="pt-halo" cx="%.1f" cy="%.1f" r="10"/><circle class="pt-dot" cx="%.1f" cy="%.1f" r="5"/></g>`,
 			classes, template.HTMLEscapeString(strings.Join(tip, "\n")), template.HTMLEscapeString(strings.Join(tip, " · ")),
 			p.x, p.y, p.x, p.y, p.x, p.y)
+	}
+	for _, p := range fails {
+		tip := tooltip(m, p)
+		fmt.Fprintf(&b, `<g class="pt is-failed" tabindex="0" data-tip="%s"><title>%s</title>`+
+			`<circle class="pt-hit" cx="%.1f" cy="%.1f" r="16"/><circle class="pt-halo" cx="%.1f" cy="%.1f" r="10"/>`+
+			`<rect class="pt-fail" x="%.1f" y="%.1f" width="12" height="12" rx="2" transform="rotate(45 %.1f %.1f)"/>`+
+			`<path class="pt-dot" d="M%.1f %.1fl7 7m0 -7l-7 7"/></g>`,
+			template.HTMLEscapeString(strings.Join(tip, "\n")), template.HTMLEscapeString(strings.Join(tip, " · ")),
+			p.x, p.y, p.x, p.y, p.x-6, p.y-6, p.x, p.y, p.x-3.5, p.y-3.5)
 	}
 	b.WriteString(`</svg>`)
 	return b.String()
@@ -309,6 +342,9 @@ func tooltip(m metric, p *chartPoint) []string {
 		when += " · " + play.Date.Format("15:04")
 	}
 	lines := []string{when}
+	if !play.HasScore() {
+		return append(lines, "Failed")
+	}
 	switch m.key {
 	case "score":
 		lines = append(lines, formatInt(play.Score)+" · "+string(play.Grade))

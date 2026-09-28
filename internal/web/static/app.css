@@ -496,6 +496,28 @@ h2 {
 .tag-pb { color: #2a1600; background: linear-gradient(180deg, #fff3b0 0%, #ffcc3a 55%, #ff9a14 100%); }
 .tag-first { color: #002a1a; background: linear-gradient(180deg, #d0fff0 0%, #44f0a8 55%, #14c07a 100%); }
 .tag-break { color: #fff; background: linear-gradient(180deg, #ff7486 0%, #e01a36 60%, #a80c24 100%); }
+.tag-fail { color: #ffb0ba; background: linear-gradient(180deg, #5c0c1c 0%, #3a0612 100%); box-shadow: inset 0 1px 0 rgba(255, 120, 140, 0.45), inset 0 -1px 0 rgba(255, 61, 82, 0.5); }
+
+/* "Not cleared": shown instead of a grade on songs and charts with no clear yet. */
+.nc { display: inline-flex; align-items: center; gap: 8px; font-style: normal; }
+.nc-badge {
+  display: inline-block;
+  padding: 4px 13px 4px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  font-style: italic;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #0a1430;
+  background: linear-gradient(180deg, #f2f6fc 0%, #b8c4d8 50%, #8290ac 100%);
+  clip-path: polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
+}
+.nc-count { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap; color: var(--text-2); }
+.dash { font-weight: 700; font-style: italic; font-size: 30px; line-height: 1; color: var(--text-3); }
+.dash-plate { font-size: 16px; }
+.dash-judg { font-size: 22px; padding-left: 4px; }
 .delta { font-weight: 700; font-style: italic; font-size: 13px; color: var(--text-3); font-variant-numeric: tabular-nums; }
 .delta.is-up { color: var(--up); text-shadow: 0 0 10px rgba(82, 255, 172, 0.35); }
 
@@ -661,6 +683,9 @@ h2 {
 }
 .card-art .frame img { transition: transform 0.4s ease; }
 .card-grade { position: absolute; z-index: 1; right: 12px; bottom: 4px; font-size: 34px; }
+.card-grade.card-nc { bottom: 10px; }
+.card-nc .nc { flex-direction: column; align-items: flex-end; gap: 4px; }
+.card-nc .nc-count { padding: 3px 9px 3px 10px; color: #fff; background: rgba(2, 10, 30, 0.86); clip-path: polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%); }
 .card-body {
   --cut: 12px;
   flex: 1;
@@ -789,6 +814,7 @@ h2 {
 .chart-tab-name { font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-2); }
 .chart-tab-best { display: flex; gap: 10px; align-items: baseline; font-weight: 700; font-style: italic; font-size: 16px; font-variant-numeric: tabular-nums; }
 .chart-tab-best .grade { font-size: 20px; }
+.chart-tab-best .nc { padding-top: 3px; }
 .chart-tab.is-active .chart-tab-name { color: #fff; }
 .chart-tab.is-active::before {
   border-color: var(--cyan);
@@ -872,6 +898,9 @@ h2 {
 .result-side { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; min-width: 0; }
 .result-grade .grade { font-size: clamp(64px, 8vw, 104px); letter-spacing: -0.02em; }
 .result-side .plate { font-size: 20px; letter-spacing: 0.05em; }
+.result-grade .nc { flex-direction: column; gap: 10px; padding: 16px 0 4px; }
+.result-grade .nc-badge { font-size: clamp(20px, 2.4vw, 26px); padding: 9px 28px 9px 26px; clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%); }
+.result-grade .nc-count { font-size: 13px; }
 .score-box {
   display: flex;
   align-items: baseline;
@@ -904,6 +933,7 @@ h2 {
 .lg-best { width: 20px; border-top: 2px dashed var(--gold); }
 .lg-pb { width: 10px; height: 10px; transform: rotate(45deg); background: var(--gold); box-shadow: 0 0 8px var(--gold); }
 .lg-break { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--miss); }
+.lg-fail { width: 10px; height: 10px; transform: rotate(45deg); background: #1a0008; border: 1.5px solid var(--miss); }
 
 /* SVG chart parts */
 .g-frame { fill: rgba(1, 8, 26, 0.6); stroke: rgba(39, 212, 255, 0.3); rx: 0; }
@@ -932,6 +962,10 @@ h2 {
 .pt-dot { fill: #021030; stroke: var(--cyan); stroke-width: 2.5; }
 .pt.is-best .pt-dot { fill: var(--gold); stroke: #fff4c4; stroke-width: 2; filter: drop-shadow(0 0 6px rgba(255, 200, 60, 0.95)); }
 .pt.is-broken .pt-dot { fill: #1a0008; stroke: var(--miss); }
+.pt-fail { fill: #1a0008; stroke: var(--miss); stroke-width: 1.5; }
+.pt.is-failed .pt-dot { fill: none; stroke: #ff8a98; stroke-width: 2; stroke-linecap: round; }
+.pt.is-failed .pt-halo { fill: var(--miss); }
+.g-empty { fill: var(--text-3); font: italic 700 16px var(--font); letter-spacing: 0.16em; text-transform: uppercase; }
 .pt:hover .pt-halo, .pt:focus-visible .pt-halo, .pt.is-hover .pt-halo { opacity: 0.28; }
 
 .tooltip {
@@ -1016,6 +1050,7 @@ h2 {
 .a-note::before { content: "“"; }
 .a-note::after { content: "”"; }
 .attempt.is-broken .a-score-num, .play-row.is-broken .play-score-num { color: var(--text-3); }
+.attempt.is-failed .a-grade { gap: 18px; }
 
 /* ---------- Activity ---------- */
 
