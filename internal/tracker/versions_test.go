@@ -236,12 +236,13 @@ func TestVersionsKeepSeparateCharts(t *testing.T) {
 // Across a link between versions that share a scoring system, the chart's
 // history carries over: personal bests, first clear and best plate.
 func TestLinkWithinAScoringSystem(t *testing.T) {
-	tr := loadVersions(t, withNext(), `{"schema_version": 1, "scores": [
+	tr := loadVersions(t, withNext(), `{"schema_version": 1,
+		"songs": {"Katkoi": {"lineages": [{"phoenix": "S7", "next": "S8"}]}},
+		"scores": [
 		{"song": "Katkoi", "chart": "S7", "date": "2026-08-01", "score": 900000, "plate": "TG",
 		 "judgments": {"perfect": 300, "great": 20, "good": 5, "bad": 3, "miss": 2}},
 		{"song": "Katkoi", "chart": "S7", "date": "2026-08-02", "broken": true},
-		{"song": "Katkoi", "chart": "S8", "date": "2027-03-01", "version": "next", "score": 890000, "plate": "FG",
-		 "continues": {"version": "phoenix", "chart": "S7"}},
+		{"song": "Katkoi", "chart": "S8", "date": "2027-03-01", "version": "next", "score": 890000, "plate": "FG"},
 		{"song": "Katkoi", "chart": "S8", "date": "2027-03-02", "version": "next", "score": 950000,
 		 "judgments": {"perfect": 310, "great": 15, "good": 3, "bad": 1, "miss": 1}}
 	]}`)
@@ -284,10 +285,12 @@ func TestLinkWithinAScoringSystem(t *testing.T) {
 // Across a link between versions with different scoring systems, personal
 // bests stay with each version, while the lineage spans both.
 func TestLinkAcrossScoringSystems(t *testing.T) {
-	tr := load(t, `{"schema_version": 1, "scores": [
+	tr := load(t, `{"schema_version": 1,
+		"songs": {"katkoi": {"lineages": [{"Prime 2": "s7", "phoenix": "S8"}]}},
+		"scores": [
 		{"song": "Katkoi", "chart": "S7", "date": "2025-08-06 20:38", "version": "prime2", "score": 646600, "grade": "A",
 		 "judgments": {"perfect": 397, "great": 23, "good": 3, "bad": 2, "miss": 2}, "max_combo": 245},
-		{"song": "Katkoi", "chart": "S8", "date": "2026-09-01", "score": 900000, "continues": {"version": "prime2", "chart": "S7"},
+		{"song": "Katkoi", "chart": "S8", "date": "2026-09-01", "score": 900000,
 		 "judgments": {"perfect": 380, "great": 30, "good": 10, "bad": 4, "miss": 3}},
 		{"song": "Katkoi", "chart": "S8", "date": "2026-09-02", "score": 880000}
 	]}`)
@@ -315,60 +318,91 @@ func TestLinkAcrossScoringSystems(t *testing.T) {
 	}
 }
 
-func TestLinkIsPerChart(t *testing.T) {
-	// A link on one play covers every play of the chart, before or after it.
-	tr := load(t, `{"schema_version": 1, "scores": [
+// A lineage can run across several versions, and a song can have several.
+func TestLineagesChainAndCoexist(t *testing.T) {
+	tr := loadVersions(t, withNext(), `{"schema_version": 1,
+		"songs": {"Katkoi": {"lineages": [{"next": "S9", "prime2": "S7", "phoenix": "S8"}, {"phoenix": "D18", "xx": "D17"}]}},
+		"scores": [
 		{"song": "Katkoi", "chart": "S7", "date": "2025-08-06", "version": "prime2", "score": 646600},
+		{"song": "Katkoi", "chart": "D17", "date": "2026-07-30", "version": "xx", "score": 700000},
 		{"song": "Katkoi", "chart": "S8", "date": "2026-09-01", "score": 900000},
-		{"song": "Katkoi", "chart": "S8", "date": "2026-09-02", "score": 910000, "continues": {"version": "prime2", "chart": "S7"}},
-		{"song": "Katkoi", "chart": "S8", "date": "2026-09-03", "score": 920000, "continues": {"version": "Prime 2", "chart": "s7"}}
+		{"song": "Katkoi", "chart": "D18", "date": "2026-09-01", "score": 800000},
+		{"song": "Katkoi", "chart": "S9", "date": "2027-03-01", "version": "next", "score": 910000}
 	]}`)
-	if n := len(tr.Songs[0].Lineages); n != 1 {
-		t.Errorf("%d lineages, want 1", n)
+	var got []string
+	for _, l := range tr.Songs[0].Lineages {
+		var charts []string
+		for _, h := range l.Charts {
+			charts = append(charts, h.Chart.String()+" "+h.Version.ID)
+		}
+		got = append(got, strings.Join(charts, " → ")+" in "+
+			map[bool]string{true: "one record", false: "records"}[len(l.Records) == 1])
+	}
+	want := "S7 prime2 → S8 phoenix → S9 next in records; D17 xx → D18 phoenix in records"
+	if strings.Join(got, "; ") != want {
+		t.Errorf("lineages = %s, want %s", strings.Join(got, "; "), want)
+	}
+	if n := len(tr.Songs[0].Lineages[0].Records); n != 2 {
+		t.Errorf("S9's lineage has %d records, want Prime 2's and Phoenix's with Next's", n)
 	}
 }
 
-func TestInvalidLinks(t *testing.T) {
-	doc := func(scores string) string { return `{"schema_version": 1, "scores": [` + scores + `]}` }
-	const prime2 = `{"song": "Katkoi", "chart": "S7", "date": "2025-08-06", "version": "prime2", "score": 646600},`
+// Lineages belong to songs, not plays.
+func TestLineagesAreSongMetadata(t *testing.T) {
+	wantProblem(t, `{"schema_version": 1, "scores": [
+		{"song": "Katkoi", "chart": "S8", "date": "2026-09-01", "score": 900000, "continues": {"version": "prime2", "chart": "S7"}}
+	]}`, `scores[0] (Katkoi S8): unknown key "continues" (expected song, chart, date, version, score, grade, plate, broken, judgments, max_combo, kcal, note)`)
+	wantProblem(t, `{"schema_version": 1, "songs": {"Katkoi": {"lineage": [{"prime2": "S7", "phoenix": "S8"}]}}}`,
+		`songs: "Katkoi": unknown key "lineage" (expected artist, bpm, image, lineages)`)
+}
+
+func TestInvalidLineages(t *testing.T) {
+	doc := func(lineages string) string {
+		return `{"schema_version": 1, "songs": {"Katkoi": {"lineages": ` + lineages + `}}, "scores": [
+			{"song": "Katkoi", "chart": "S7", "date": "2025-08-06", "version": "prime2", "score": 646600},
+			{"song": "Katkoi", "chart": "S6", "date": "2025-08-06", "version": "prime2", "score": 700000},
+			{"song": "Katkoi", "chart": "S8", "date": "2026-09-01", "score": 900000},
+			{"song": "Katkoi", "chart": "S9", "date": "2026-09-01", "score": 900000},
+			{"song": "Vook", "chart": "S7", "date": "2025-08-06", "version": "prime2", "score": 646600}
+		]}`
+	}
 	cases := map[string]string{
-		// Two plays of the same chart disagree on what it continues.
-		prime2 + `{"song": "Katkoi", "chart": "S6", "date": "2025-08-06", "version": "prime2", "score": 700000},
-		 {"song": "Katkoi", "chart": "S8", "date": "2026-09-01", "score": 900000, "continues": {"version": "prime2", "chart": "S7"}},
-		 {"song": "Katkoi", "chart": "S8", "date": "2026-09-02", "score": 900000, "continues": {"version": "prime2", "chart": "S6"}}`: "scores[3] (Katkoi S8): continues S6 in Prime 2, but scores[2] (Katkoi S8) says this chart continues S7 in Prime 2; a chart can only continue one chart",
-		// A link forward in time.
-		`{"song": "Katkoi", "chart": "S8", "date": "2026-09-01", "score": 900000},
-		 {"song": "Katkoi", "chart": "S7", "date": "2025-08-06", "version": "prime2", "score": 646600, "continues": {"version": "phoenix", "chart": "S8"}}`: "scores[1] (Katkoi S7): continues Phoenix, which was not released before Prime 2; a chart can only continue a chart of an earlier version",
-		// A link within one version.
-		prime2 + `{"song": "Katkoi", "chart": "S8", "date": "2025-08-07", "version": "prime2", "score": 646600, "continues": {"version": "prime2", "chart": "S7"}}`: "continues Prime 2, which was not released before Prime 2",
-		// A link to a chart with no plays.
-		`{"song": "Katkoi", "chart": "S8", "date": "2026-09-01", "score": 900000, "continues": {"version": "prime2", "chart": "S9"}}`: "scores[0] (Katkoi S8): continues S9 in Prime 2, which has no plays; log at least one play of that chart, or check the version and chart",
-		// A link to another song's chart is a link to a chart with no plays.
-		prime2 + `{"song": "Vook", "chart": "S8", "date": "2026-09-01", "score": 900000, "continues": {"version": "prime2", "chart": "S7"}}`: "scores[1] (Vook S8): continues S7 in Prime 2, which has no plays",
-		// Two charts continuing one.
-		prime2 + `{"song": "Katkoi", "chart": "S8", "date": "2026-09-01", "score": 900000, "continues": {"version": "prime2", "chart": "S7"}},
-		 {"song": "Katkoi", "chart": "S9", "date": "2026-09-01", "score": 900000, "continues": {"version": "prime2", "chart": "S7"}}`: "scores[2] (Katkoi S9): continues S7 in Prime 2, but S8 in Phoenix already continues that chart (scores[1] (Katkoi S8)); a chart can only be continued by one chart",
-		`{"song": "Katkoi", "chart": "S8", "date": "2026-09-01", "score": 900000, "continues": {"chart": "S7"}}`:                                      "scores[0] (Katkoi S8): continues.version is required",
-		`{"song": "Katkoi", "chart": "S8", "date": "2026-09-01", "score": 900000, "continues": {"version": "prime2"}}`:                                "scores[0] (Katkoi S8): continues.chart is required",
-		`{"song": "Katkoi", "chart": "S8", "date": "2026-09-01", "score": 900000, "continues": {"version": "fiesta", "chart": "S7"}}`:                 `continues.version "fiesta" is not a supported game version (expected phoenix, prime2 or xx)`,
-		`{"song": "Katkoi", "chart": "S8", "date": "2026-09-01", "score": 900000, "continues": {"version": "prime2", "chart": "Q7"}}`:                 `scores[0] (Katkoi S8): continues.chart "Q7" is not in a recognised format`,
-		`{"song": "Katkoi", "chart": "S8", "date": "2026-09-01", "score": 900000, "continues": {"version": "prime2", "chart": "S7", "song": "Vook"}}`: `scores[0] (Katkoi S8): continues: unknown key "song" (expected version, chart)`,
+		// One chart in two lineages.
+		`[{"prime2": "S7", "phoenix": "S8"}, {"prime2": "S7", "phoenix": "S9"}]`: `songs: "Katkoi": lineages[1]: S7 in Prime 2 is already in lineages[0]; a chart can only be in one lineage`,
+		// A chart with no plays, which is how a typo shows.
+		`[{"prime2": "S7", "phoenix": "S10"}]`: `songs: "Katkoi": lineages[0]: S10 in Phoenix has no plays; log at least one play of it, or check the version and chart`,
+		`[{"xx": "S7", "phoenix": "S8"}]`:      `songs: "Katkoi": lineages[0]: S7 in XX has no plays`,
+		// One version.
+		`[{"phoenix": "S8"}]`: `songs: "Katkoi": lineages[0]: a lineage links the charts of at least two versions, such as {prime2: S7, phoenix: S8}`,
+		`[{}]`:                `a lineage links the charts of at least two versions`,
+		// The same version twice, however it is written.
+		`[{"prime2": "S7", "Prime 2": "S6", "phoenix": "S8"}]`: `songs: "Katkoi": lineages[0]: Prime 2 is listed twice; a lineage has one chart per version`,
+		`[{"prime3": "S7", "phoenix": "S8"}]`:                  `songs: "Katkoi": lineages[0]: "prime3" is not a supported game version (expected phoenix, prime2 or xx)`,
+		`[{"prime2": "Q7", "phoenix": "S8"}]`:                  `songs: "Katkoi": lineages[0]: prime2: chart "Q7" is not in a recognised format`,
+		`[["S7", "S8"]]`:                                       `songs: "Katkoi": lineages: expected a mapping, got a list`,
 	}
-	for scores, want := range cases {
-		wantProblem(t, doc(scores), want)
+	for lineages, want := range cases {
+		wantProblem(t, doc(lineages), want)
 	}
-	// A link to a chart whose only play has a mistake names just the mistake,
+	// Another song's chart has no plays of this song.
+	wantProblem(t, `{"schema_version": 1, "songs": {"Vook": {"lineages": [{"prime2": "S7", "phoenix": "S8"}]}}, "scores": [
+		{"song": "Vook", "chart": "S7", "date": "2025-08-06", "version": "prime2", "score": 646600},
+		{"song": "Katkoi", "chart": "S8", "date": "2026-09-01", "score": 900000}
+	]}`, `songs: "Vook": lineages[0]: S8 in Phoenix has no plays`)
+	// A lineage whose chart's only play has a mistake names just the mistake,
 	// whatever the mistake is.
-	for target, mistake := range map[string]string{
+	for play, mistake := range map[string]string{
 		`"score": 646650`:                       "not a multiple of 100",
 		`"score": 646600, "date": "2025-13-45"`: `date "2025-13-45" is not in a recognised format`,
 		`"score": "abc"`:                        `score: expected a whole number, got "abc"`,
 		`"score": 646600, "plate": "TG"`:        "plate is not used in Prime 2",
 	} {
-		ps := problems(t, doc(`{"song": "Katkoi", "chart": "S7", "date": "2025-08-06", "version": "prime2", `+target+`},
-			{"song": "Katkoi", "chart": "S8", "date": "2026-09-01", "score": 900000, "continues": {"version": "prime2", "chart": "S7"}}`))
+		ps := problems(t, `{"schema_version": 1, "songs": {"Katkoi": {"lineages": [{"prime2": "S7", "phoenix": "S8"}]}}, "scores": [
+			{"song": "Katkoi", "chart": "S7", "date": "2025-08-06", "version": "prime2", `+play+`},
+			{"song": "Katkoi", "chart": "S8", "date": "2026-09-01", "score": 900000}
+		]}`)
 		if len(ps) != 1 || !strings.Contains(ps[0], mistake) {
-			t.Errorf("%s: problems = %q", target, ps)
+			t.Errorf("%s: problems = %q", play, ps)
 		}
 	}
 }
@@ -396,9 +430,81 @@ func TestVersionList(t *testing.T) {
 	if _, err := LoadVersions(strings.NewReader(`{"schema_version": 1}`), append(Versions(), Version{ID: "xx", Name: "XX again", Scoring: XXScoring})); err == nil {
 		t.Error("a version listed twice was accepted")
 	}
+	// A scoring system with a slice in it would make comparing two panic.
+	sliced := Version{ID: "next", Name: "Next", Scoring: slicedScoring{PhoenixScoring, []int{1}}}
+	if _, err := LoadVersions(strings.NewReader(`{"schema_version": 1}`), append(Versions(), sliced)); err == nil || !strings.Contains(err.Error(), "make it a pointer") {
+		t.Errorf("a scoring system that cannot be compared: %v", err)
+	}
+	sliced.Scoring = &slicedScoring{PhoenixScoring, []int{1}}
+	if _, err := LoadVersions(strings.NewReader(`{"schema_version": 1}`), append(Versions(), sliced)); err != nil {
+		t.Errorf("a pointer to it: %v", err)
+	}
 	// An empty log still has a current version.
 	tr := load(t, `{"schema_version": 1}`)
 	if tr.Current.ID != "phoenix" || len(tr.PlayedVersions()) != 0 {
 		t.Errorf("current = %s", tr.Current.ID)
 	}
+}
+
+// Every real result screen falls within the range of scores its judgments,
+// max combo and grade allow. Six of them sit exactly on the lowest: the
+// screens whose score they fully determine.
+func TestLegacyScoreRangeFitsResultScreens(t *testing.T) {
+	_, entries := resultScreens(t)
+	exact := 0
+	for _, e := range entries {
+		j := e["judgments"].(map[string]any)
+		n := func(k string) int { return int(j[k].(float64)) }
+		r := Result{
+			Chart:     mustChart(t, e["chart"].(string)),
+			Score:     int(e["score"].(float64)),
+			Grade:     Grade(e["grade"].(string)),
+			Judgments: &Judgments{n("perfect"), n("great"), n("good"), n("bad"), n("miss")},
+			MaxCombo:  int(e["max_combo"].(float64)),
+		}
+		lo, hi := legacyScoreRange(r)
+		if r.Score < lo || r.Score > hi {
+			t.Errorf("%s %s: score %d is outside %d to %d", e["song"], e["chart"], r.Score, lo, hi)
+		}
+		if r.Score == lo {
+			exact++
+		}
+	}
+	if exact != 6 {
+		t.Errorf("%d result screens score the lowest their judgments allow, want 6", exact)
+	}
+}
+
+func TestLegacyScoreRangeCatchesTypos(t *testing.T) {
+	const judg = `"judgments": {"perfect": 496, "great": 31, "good": 2, "bad": 1, "miss": 0}`
+	entry := func(extra string) string {
+		return `{"schema_version": 1, "scores": [{"song": "Le Grand Bleu", "chart": "S7", "date": "2025-09-09", "version": "prime2", ` + extra + `}]}`
+	}
+	for extra, want := range map[string]string{
+		// A digit misread.
+		`"score": 1036500, "grade": "S", "max_combo": 460, ` + judg: "score 1036500 is lower than Prime 2 allows for its judgments and max combo and grade, which is at least 1038500",
+		// The S bonus is what takes it past 1,000,000.
+		`"score": 938500, "grade": "S", "max_combo": 460, ` + judg: "score 938500 is lower than Prime 2 allows for its judgments and max combo and grade, which is at least 1038500",
+		`"score": 938400, "max_combo": 460, ` + judg:               "score 938400 is lower than Prime 2 allows for its judgments and max combo, which is at least 938500",
+		// A digit too many.
+		`"score": 10385000, "grade": "S", "max_combo": 460, ` + judg: "score 10385000 is higher than Prime 2 allows for its judgments and max combo and grade, which is at most",
+		// Without the max combo, the one Bad could have broken the combo
+		// anywhere, which still leaves 427 hits past the 50th.
+		`"score": 900000, ` + judg: "score 900000 is lower than Prime 2 allows for its judgments, which is at least 938500",
+	} {
+		wantProblem(t, entry(extra), "scores[0] (Le Grand Bleu S7): "+want)
+	}
+	// Grades below S earn no bonus, which lowers the highest score.
+	wantProblem(t, entry(`"score": 2500000, "grade": "A", "max_combo": 460, `+judg), "is higher than Prime 2 allows")
+	load(t, entry(`"score": 2500000, "grade": "S", "max_combo": 460, `+judg))
+	// A stage break's result screen does not add up the same way: only its
+	// rounding is checked.
+	load(t, entry(`"score": 500000, "broken": true, "max_combo": 460, `+judg))
+	// Co-op scoring is not documented, so it has no highest score.
+	load(t, `{"schema_version": 1, "scores": [{"song": "Destination", "chart": "CoOp2", "date": "2025-09-09", "version": "xx", "score": 90000000, `+judg+`}]}`)
+}
+
+type slicedScoring struct {
+	ScoringSystem
+	extra []int
 }

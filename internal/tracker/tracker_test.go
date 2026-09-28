@@ -352,7 +352,7 @@ func TestUnreadableFiles(t *testing.T) {
 func TestUnknownFieldsAreRejected(t *testing.T) {
 	wantProblem(t, `{"schema_version": 1, "scores": [{
 		"song": "Big Daddy", "chart": "S11", "date": "2026-09-28", "score": 938204, "perfects": 506
-	}]}`, `scores[0] (Big Daddy S11): unknown key "perfects" (expected song, chart, date, version, score, grade, plate, broken, judgments, max_combo, kcal, note, continues)`)
+	}]}`, `scores[0] (Big Daddy S11): unknown key "perfects" (expected song, chart, date, version, score, grade, plate, broken, judgments, max_combo, kcal, note)`)
 	wantProblem(t, `{"schema_version": 1, "scores": [{
 		"song": "Big Daddy", "chart": "S11", "date": "2026-09-28", "score": 938204,
 		"judgments": {"perfects": 506, "great": 31, "good": 11, "bad": 7, "miss": 6}

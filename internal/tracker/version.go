@@ -2,6 +2,7 @@ package tracker
 
 import (
 	"fmt"
+	"reflect"
 	"slices"
 	"strings"
 )
@@ -34,6 +35,10 @@ const DefaultVersion = "phoenix"
 // Versions returns the game versions this build reads, in release order.
 func Versions() []Version { return slices.Clone(versions) }
 
+// Order is the version's place in release order, counted from 0 for the
+// oldest.
+func (v *Version) Order() int { return v.order }
+
 // Before reports whether v was released before o.
 func (v *Version) Before(o *Version) bool { return v.order < o.order }
 
@@ -54,6 +59,11 @@ func newVersionSet(vs []Version) (versionSet, error) {
 		}
 		if seen[key] {
 			return nil, fmt.Errorf("game version %q is listed twice", v.ID)
+		}
+		// Records compare scoring systems with ==, which panics on a value
+		// holding a slice, map or function.
+		if !reflect.TypeOf(v.Scoring).Comparable() {
+			return nil, fmt.Errorf("game version %q: its scoring system %s cannot be compared with ==; make it a pointer", v.ID, v.Scoring.Name())
 		}
 		seen[key] = true
 		v.order = i

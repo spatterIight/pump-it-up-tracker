@@ -10,6 +10,7 @@ import (
 	"math"
 	"os"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -48,6 +49,9 @@ type songData struct {
 	Artist flexString `json:"artist"`
 	BPM    flexString `json:"bpm"`
 	Image  string     `json:"image"`
+	// Lineages lists the song's step charts that are in more than one
+	// version, each as a mapping from version to its chart in that version.
+	Lineages []map[string]flexString `json:"lineages"`
 }
 
 type scoreData struct {
@@ -63,13 +67,6 @@ type scoreData struct {
 	MaxCombo  *flexInt       `json:"max_combo"`
 	Kcal      *float64       `json:"kcal"`
 	Note      flexString     `json:"note"`
-	Continues *continuesData `json:"continues"`
-}
-
-// continuesData links a chart to the same step chart in an earlier version.
-type continuesData struct {
-	Version flexString `json:"version"`
-	Chart   flexString `json:"chart"`
 }
 
 type judgmentsData struct {
@@ -391,12 +388,14 @@ type chartID struct {
 	chart   Chart
 }
 
-// link is a `continues` link as logged by one entry.
-type link struct {
-	where  string
-	from   chartID
-	to     chartID
-	target string // the target as written in messages: "S7 in Phoenix"
+// lineage is a chart lineage as declared in a song's metadata.
+type lineage struct {
+	// where names the lineage in problems: `songs: "Katkoi": lineages[0]`.
+	where string
+	// index is the lineage's place in its song's list.
+	index int
+	// charts, oldest version first.
+	charts []chartID
 }
 
 func build(data fileData, vs versionSet) (*Tracker, error) {
@@ -421,6 +420,7 @@ func build(data fileData, vs versionSet) (*Tracker, error) {
 	// "Big Daddy" in another are the same song. The spelling used in the song
 	// metadata wins, otherwise the first spelling encountered.
 	songs := map[string]*Song{}
+	var lineages []lineage
 	metaTitles := make([]string, 0, len(data.Songs))
 	for title := range data.Songs {
 		metaTitles = append(metaTitles, title)
@@ -450,13 +450,17 @@ func build(data fileData, vs versionSet) (*Tracker, error) {
 			BPM:    strings.TrimSpace(string(meta.BPM)),
 			Image:  strings.TrimSpace(meta.Image),
 		}
+		for i, decl := range meta.Lineages {
+			if l, ok := parseLineage(decl, key, i, fmt.Sprintf("songs: %q: lineages[%d]", clean, i), vs, addf); ok {
+				lineages = append(lineages, l)
+			}
+		}
 	}
 
 	histories := map[chartID]*ChartHistory{}
 	// logged holds every chart named by an entry, even one rejected for
 	// another mistake, so that a link to it is not reported as well.
 	logged := map[chartID]bool{}
-	var links []link
 
 	for i, entry := range data.Scores {
 		// The keys that could be read still name the entry.
@@ -508,7 +512,7 @@ func build(data fileData, vs versionSet) (*Tracker, error) {
 			version = v
 		}
 		sys := version.Scoring
-		canCompute := computesScores(sys)
+		canCompute := sys.ComputesScores()
 
 		// A stage break with no score is a fail the result screen shows as
 		// "-": nothing about it was recorded beyond when it happened.
@@ -585,11 +589,19 @@ func build(data fileData, vs versionSet) (*Tracker, error) {
 			}
 		}
 
+		// The grade as logged, which the score is also checked against. A
+		// grade the version does not have is reported below.
+		var loggedGrade Grade
+		gradeKnown := false
+		if raw.Grade != "" && !noScore {
+			loggedGrade, gradeKnown = parseGrade(sys, raw.Grade)
+		}
+
 		if len(problems) == entryProblems && !noScore {
 			canReconcile := judgments != nil && maxCombo >= 0
 			switch {
 			case score < 0 && canReconcile && canCompute:
-				score, _ = sys.ComputeScore(*judgments, maxCombo)
+				score = sys.ComputeScore(*judgments, maxCombo)
 			case score < 0 && canCompute:
 				addf("%s: score is required, unless judgments and max_combo are given to work it out from "+
 					"(for a failed play with no score, add broken: true instead)", where)
@@ -599,11 +611,11 @@ func build(data fileData, vs versionSet) (*Tracker, error) {
 			default:
 				// A broken stage stops counting notes part-way through, so its
 				// result screen does not add up the same way.
-				var against *Judgments
-				if canReconcile && !raw.Broken {
-					against = judgments
+				r := Result{Chart: chart, Score: score, Grade: loggedGrade, MaxCombo: maxCombo}
+				if !raw.Broken {
+					r.Judgments = judgments
 				}
-				if err := sys.CheckScore(score, against, maxCombo); err != nil {
+				if err := sys.CheckScore(r); err != nil {
 					addf("%s: %v", where, err)
 				}
 			}
@@ -615,9 +627,9 @@ func build(data fileData, vs versionSet) (*Tracker, error) {
 			grade, gradeWorkedOut = sys.Grade(score, judgments)
 		}
 		if raw.Grade != "" && !noScore {
-			g, ok := parseGrade(sys, raw.Grade)
+			g := loggedGrade
 			switch {
-			case !ok:
+			case !gradeKnown:
 				addf("%s: grade %q is not a %s grade (%s)", where, raw.Grade, version.Name, gradeList(sys.Grades()))
 			case raw.Broken || !gradeWorkedOut:
 				grade = g
@@ -648,14 +660,6 @@ func build(data fileData, vs versionSet) (*Tracker, error) {
 				addf("%s: kcal cannot be negative", where)
 			}
 			kcal = *raw.Kcal
-		}
-
-		if c := raw.Continues; c != nil {
-			if l, ok := parseLink(c, vs, version, where, addf); ok && identified {
-				l.from = id
-				l.to.song = id.song
-				links = append(links, l)
-			}
 		}
 
 		if len(problems) > entryProblems {
@@ -695,7 +699,7 @@ func build(data fileData, vs versionSet) (*Tracker, error) {
 		t.Plays = append(t.Plays, play)
 	}
 
-	problems = append(problems, resolveLinks(links, logged, histories)...)
+	problems = append(problems, resolveLineages(lineages, logged, histories)...)
 	if len(problems) > 0 {
 		return nil, &ValidationError{Problems: problems}
 	}
@@ -783,74 +787,73 @@ func identify(raw scoreData, vs versionSet, defaultVersion *Version) (id chartID
 	return chartID{strings.ToLower(title), version, chart}, title != "" && err == nil
 }
 
-// computesScores reports whether a scoring system works out scores from
-// judgments and max combo. A system either always can or never can.
-func computesScores(sys ScoringSystem) bool {
-	_, ok := sys.ComputeScore(Judgments{Perfect: 1}, 1)
-	return ok
-}
-
-// parseLink reads the `continues` key of an entry of version v.
-func parseLink(c *continuesData, vs versionSet, v *Version, where string, addf func(string, ...any)) (link, bool) {
+// parseLineage reads one of the lineages in the metadata of the song with
+// the lowercased title song.
+func parseLineage(decl map[string]flexString, song string, index int, where string, vs versionSet, addf func(string, ...any)) (lineage, bool) {
+	l := lineage{where: where, index: index}
 	valid := true
-	target, err := ParseChart(string(c.Chart))
-	if strings.TrimSpace(string(c.Chart)) == "" {
-		addf("%s: continues.chart is required: the chart this one continues, as its level ball showed it in that version", where)
-		valid = false
-	} else if err != nil {
-		addf("%s: continues.%v", where, err)
+	keys := make([]string, 0, len(decl))
+	for k := range decl {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		v, ok := vs.lookup(k)
+		if !ok {
+			addf("%s: %q is not a supported game version (expected %s)", where, k, vs.list())
+			valid = false
+			continue
+		}
+		chart, err := ParseChart(string(decl[k]))
+		if err != nil {
+			addf("%s: %s: %v", where, k, err)
+			valid = false
+			continue
+		}
+		if i := slices.IndexFunc(l.charts, func(c chartID) bool { return c.version == v }); i >= 0 {
+			addf("%s: %s is listed twice; a lineage has one chart per version", where, v.Name)
+			valid = false
+			continue
+		}
+		l.charts = append(l.charts, chartID{song, v, chart})
+	}
+	if len(decl) < 2 {
+		addf("%s: a lineage links the charts of at least two versions, such as {prime2: S7, phoenix: S8}", where)
 		valid = false
 	}
-	tv, known := vs.lookup(string(c.Version))
-	switch {
-	case strings.TrimSpace(string(c.Version)) == "":
-		addf("%s: continues.version is required: the earlier version the chart is continued from (%s)", where, vs.list())
-		valid = false
-	case !known:
-		addf("%s: continues.version %q is not a supported game version (expected %s)", where, c.Version, vs.list())
-		valid = false
-	case !tv.Before(v):
-		addf("%s: continues %s, which was not released before %s; a chart can only continue a chart of an earlier version", where, tv.Name, v.Name)
-		valid = false
-	}
-	if !valid {
-		return link{}, false
-	}
-	return link{
-		where:  where,
-		to:     chartID{version: tv, chart: target},
-		target: fmt.Sprintf("%s in %s", target, tv.Name),
-	}, true
+	slices.SortFunc(l.charts, func(a, b chartID) int { return a.version.order - b.version.order })
+	return l, valid
 }
 
-// resolveLinks joins linked charts and reports links that conflict, and
-// links to charts that were never played.
-func resolveLinks(links []link, logged map[chartID]bool, histories map[chartID]*ChartHistory) []string {
+// resolveLineages links the charts of each lineage, and reports lineages
+// with a chart that was never played, or that is in another lineage too.
+func resolveLineages(ls []lineage, logged map[chartID]bool, histories map[chartID]*ChartHistory) []string {
 	var problems []string
-	first := map[chartID]link{}     // the first link of each chart
-	successor := map[chartID]link{} // the first chart continuing each chart
-	for _, l := range links {
-		if prev, seen := first[l.from]; seen {
-			if prev.to != l.to {
-				problems = append(problems, fmt.Sprintf("%s: continues %s, but %s says this chart continues %s; a chart can only continue one chart",
-					l.where, l.target, prev.where, prev.target))
+	in := map[chartID]int{} // the lineage each chart is in, by index
+	for _, l := range ls {
+		valid := true
+		for _, c := range l.charts {
+			switch other, taken := in[c]; {
+			case !logged[c]:
+				problems = append(problems, fmt.Sprintf("%s: %s in %s has no plays; log at least one play of it, or check the version and chart",
+					l.where, c.chart, c.version.Name))
+				valid = false
+			case taken:
+				problems = append(problems, fmt.Sprintf("%s: %s in %s is already in lineages[%d]; a chart can only be in one lineage",
+					l.where, c.chart, c.version.Name, other))
+				valid = false
 			}
+		}
+		if !valid {
 			continue
 		}
-		first[l.from] = l
-		if !logged[l.to] {
-			problems = append(problems, fmt.Sprintf("%s: continues %s, which has no plays; log at least one play of that chart, or check the version and chart",
-				l.where, l.target))
-			continue
-		}
-		if prev, taken := successor[l.to]; taken {
-			problems = append(problems, fmt.Sprintf("%s: continues %s, but %s in %s already continues that chart (%s); a chart can only be continued by one chart",
-				l.where, l.target, prev.from.chart, prev.from.version.Name, prev.where))
-			continue
-		}
-		successor[l.to] = l
-		if from, to := histories[l.from], histories[l.to]; from != nil && to != nil {
-			from.Continues = to
+		for i, c := range l.charts {
+			in[c] = l.index
+			if i > 0 {
+				if h, prev := histories[c], histories[l.charts[i-1]]; h != nil && prev != nil {
+					h.Continues = prev
+				}
+			}
 		}
 	}
 	return problems

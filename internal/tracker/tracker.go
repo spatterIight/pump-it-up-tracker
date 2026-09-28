@@ -49,7 +49,7 @@ type Song struct {
 
 // ChartHistory is every play of one chart of a song in one game version.
 // Charts of different versions are different charts, even at the same level,
-// unless a play links them with `continues`.
+// unless the song's metadata links them in a lineage.
 type ChartHistory struct {
 	Song    *Song
 	Version *Version
@@ -71,8 +71,8 @@ type ChartHistory struct {
 }
 
 // Lineage is one step chart of a song followed through game versions: charts
-// linked with `continues`, possibly at different levels. A chart that is not
-// linked to another is a lineage of its own.
+// the song's metadata links, possibly at different levels. A chart that is
+// not linked to another is a lineage of its own.
 type Lineage struct {
 	Song *Song
 	// Charts, one per version, oldest version first.

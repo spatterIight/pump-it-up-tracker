@@ -137,7 +137,7 @@
   </div>
   <div class="grid" data-grid>
     {{range .Cards}}
-    <a class="card" href="{{songURL .Song.Slug}}" data-search="{{search .Song}}" data-title="{{.Song.Title}}" data-modes="{{modes .Charts}}" data-level="{{with .Top}}{{.Chart.Level}}{{end}}" data-last="{{unix .Last}}" data-grade="{{.Rank}}" data-plays="{{.Plays}}">
+    <a class="card" href="{{songURL .Song.Slug}}" data-search="{{search .Song}}" data-title="{{.Song.Title}}" data-modes="{{modes .Charts}}" data-level="{{with .Top}}{{.Chart.Level}}{{end}}" data-last="{{unix .Last}}" data-grade="{{.Rank}}" data-version="{{.Version.Order}}" data-plays="{{.Plays}}">
       <div class="card-art">
         <span class="frame"><img src="{{artURL .Song.Slug}}" alt="" loading="lazy" width="700" height="393"></span>
         {{if old .Version}}<span class="card-ver">{{template "ver" .Version}}</span>{{end}}

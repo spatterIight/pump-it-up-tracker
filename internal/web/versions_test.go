@@ -101,10 +101,12 @@ func TestLineageAcrossScoringSystems(t *testing.T) {
 // draws one score line.
 func TestLineageWithinAScoringSystem(t *testing.T) {
 	versions := append(tracker.Versions(), tracker.Version{ID: "next", Name: "Next", Scoring: tracker.PhoenixScoring})
-	tr, err := tracker.LoadVersions(strings.NewReader(`{"schema_version": 1, "scores": [
+	tr, err := tracker.LoadVersions(strings.NewReader(`{"schema_version": 1,
+		"songs": {"Katkoi": {"lineages": [{"phoenix": "S7", "next": "S8"}]}},
+		"scores": [
 		{"song": "Katkoi", "chart": "S7", "date": "2026-08-01", "score": 900000},
 		{"song": "Katkoi", "chart": "S7", "date": "2026-08-02", "score": 920000},
-		{"song": "Katkoi", "chart": "S8", "date": "2027-03-01", "version": "next", "score": 910000, "continues": {"version": "phoenix", "chart": "S7"}},
+		{"song": "Katkoi", "chart": "S8", "date": "2027-03-01", "version": "next", "score": 910000},
 		{"song": "Vook", "chart": "S12", "date": "2026-08-01", "score": 800000}
 	]}`), versions)
 	if err != nil {
@@ -202,9 +204,9 @@ func TestUngradedClears(t *testing.T) {
 	}
 	_, home := get(t, serve(t, tr, "/"), "/")
 	wantAll(t, "home", home, "2 cleared charts", `title="No grade logged: 1"`, `<i class="gb-swatch g-none"></i>No grade logged<span>1</span>`,
-		`data-title="DUEL" data-modes="single" data-level="13" data-last="1785369600" data-grade="0"`,
-		`data-title="Katkoi" data-modes="single" data-level="7" data-last="1785369600" data-grade="101"`,
-		`data-title="Vook" data-modes="single" data-level="7" data-last="1785369600" data-grade="102"`)
+		`data-title="DUEL" data-modes="single" data-level="13" data-last="1785369600" data-grade="0" data-version="1"`,
+		`data-title="Katkoi" data-modes="single" data-level="7" data-last="1785369600" data-grade="1" data-version="1"`,
+		`data-title="Vook" data-modes="single" data-level="7" data-last="1785369600" data-grade="2" data-version="1"`)
 }
 
 func TestAPIVersions(t *testing.T) {

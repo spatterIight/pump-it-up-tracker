@@ -9,22 +9,24 @@ import (
 // ScoringSystem is how a game version scores and grades a play. Versions
 // that share a scoring system share personal bests across chart links; see
 // README.md, "Adding a game version". Systems are compared with ==, so each
-// is a pointer or a value of a comparable type.
+// is a pointer or a value of a comparable type; a version list with any
+// other kind is refused.
 type ScoringSystem interface {
 	// Name names the scoring system in messages ("Phoenix").
 	Name() string
 	// MaxScore is the highest score a chart can award, or 0 when there is no
 	// known limit.
 	MaxScore() int
+	// ComputesScores reports whether ComputeScore works out scores. When it
+	// does not, as when the system has no verified formula, a play must give
+	// its score.
+	ComputesScores() bool
 	// ComputeScore works out the score the game awards for a set of judgments
-	// and max combo. ok is false when the system has no verified formula, in
-	// which case a play must give its score.
-	ComputeScore(j Judgments, maxCombo int) (score int, ok bool)
-	// CheckScore returns an error when a logged score cannot be right. j is
-	// the judgments to check it against with maxCombo, or nil when the play
-	// has none, or is a stage break, whose result screen does not add up the
-	// same way.
-	CheckScore(score int, j *Judgments, maxCombo int) error
+	// and max combo. It is only called when ComputesScores is true.
+	ComputeScore(j Judgments, maxCombo int) int
+	// CheckScore returns an error when a logged score cannot be right for
+	// the rest of its result.
+	CheckScore(r Result) error
 	// Grades lists every grade the system awards, best first.
 	Grades() []Grade
 	// Grade returns the grade a result earns, from its score and, when they
@@ -40,21 +42,33 @@ type ScoringSystem interface {
 	HasPlates() bool
 }
 
+// Result is a result screen as logged, for checking its score.
+type Result struct {
+	Chart Chart
+	Score int
+	// Grade is empty when none was logged.
+	Grade Grade
+	// Judgments is nil when none were logged, and for a stage break, whose
+	// result screen does not add up the same way.
+	Judgments *Judgments
+	// MaxCombo is -1 when not recorded.
+	MaxCombo int
+}
+
 // PhoenixScoring scores and grades plays the way Pump It Up Phoenix does.
 var PhoenixScoring ScoringSystem = phoenixScoring{}
 
 type phoenixScoring struct{}
 
-func (phoenixScoring) Name() string  { return "Phoenix" }
-func (phoenixScoring) MaxScore() int { return MaxScore }
-func (phoenixScoring) ComputeScore(j Judgments, maxCombo int) (int, bool) {
-	return ComputeScore(j, maxCombo), true
-}
-func (phoenixScoring) CheckScore(score int, j *Judgments, maxCombo int) error {
-	if j == nil {
+func (phoenixScoring) Name() string                               { return "Phoenix" }
+func (phoenixScoring) MaxScore() int                              { return MaxScore }
+func (phoenixScoring) ComputesScores() bool                       { return true }
+func (phoenixScoring) ComputeScore(j Judgments, maxCombo int) int { return ComputeScore(j, maxCombo) }
+func (phoenixScoring) CheckScore(r Result) error {
+	if r.Judgments == nil || r.MaxCombo < 0 {
 		return nil
 	}
-	return checkScore(score, *j, maxCombo)
+	return checkScore(r.Score, *r.Judgments, r.MaxCombo)
 }
 func (phoenixScoring) Grades() []Grade { return phoenixGrades }
 func (phoenixScoring) Grade(score int, _ *Judgments) (Grade, bool) {

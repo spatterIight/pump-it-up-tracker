@@ -54,7 +54,12 @@
           case "level":
             return num(b, "level") - num(a, "level") || num(b, "last") - num(a, "last");
           case "grade":
-            return num(b, "grade") - num(a, "grade") || num(b, "level") - num(a, "level");
+            // Cleared songs first; grades only compare within a version, so
+            // the newest version's come first.
+            return (num(b, "grade") > 0) - (num(a, "grade") > 0) ||
+              num(b, "version") - num(a, "version") ||
+              num(b, "grade") - num(a, "grade") ||
+              num(b, "level") - num(a, "level");
           case "plays":
             return num(b, "plays") - num(a, "plays") || num(b, "last") - num(a, "last");
           default:

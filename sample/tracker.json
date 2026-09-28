@@ -19,6 +19,14 @@
     "Rock the house": {
       "artist": "Matduke",
       "bpm": "175"
+    },
+    "Katkoi": {
+      "lineages": [
+        {
+          "prime2": "S7",
+          "phoenix": "S7"
+        }
+      ]
     }
   },
   "scores": [
@@ -786,11 +794,7 @@
         "bad": 2,
         "miss": 1
       },
-      "max_combo": 310,
-      "continues": {
-        "version": "prime2",
-        "chart": "S7"
-      }
+      "max_combo": 310
     },
     {
       "song": "Katkoi",
