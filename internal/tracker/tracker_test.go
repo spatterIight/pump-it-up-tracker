@@ -578,6 +578,43 @@ func TestStats(t *testing.T) {
 	}
 }
 
+// Dates are ordered and grouped by the player's clock, whether or not they
+// were written with a UTC offset.
+func TestDatesWithOffsetsKeepTheirClockTime(t *testing.T) {
+	tr := load(t, `{"schema_version": 1, "scores": [
+		{"song": "Big Daddy", "chart": "S11", "date": "2026-09-28T08:00:00+09:00", "score": 910000},
+		{"song": "Big Daddy", "chart": "S11", "date": "2026-09-28", "score": 900000},
+		{"song": "Big Daddy", "chart": "S11", "date": "2026-09-28T23:30:00-07:00", "score": 920000}
+	]}`)
+	var got []string
+	for _, p := range tr.Plays {
+		got = append(got, p.Date.Format("2006-01-02 15:04"))
+	}
+	if want := "2026-09-28 00:00,2026-09-28 08:00,2026-09-28 23:30"; strings.Join(got, ",") != want {
+		t.Errorf("plays = %v, want %s", got, want)
+	}
+	if len(tr.Days) != 1 {
+		t.Errorf("days = %d, want 1", len(tr.Days))
+	}
+}
+
+// "The last 30 days" is the same calendar days wherever the server is.
+func TestRecentPBsFollowTheCalendar(t *testing.T) {
+	tr := load(t, `{"schema_version": 1, "scores": [
+		{"song": "Big Daddy", "chart": "S11", "date": "2026-08-29", "score": 900000},
+		{"song": "Conflict", "chart": "S15", "date": "2026-08-30", "score": 900000}
+	]}`)
+	for _, now := range []time.Time{
+		time.Date(2026, 9, 28, 8, 0, 0, 0, time.FixedZone("UTC+10", 10*3600)),
+		time.Date(2026, 9, 28, 12, 0, 0, 0, time.UTC),
+		time.Date(2026, 9, 28, 20, 0, 0, 0, time.FixedZone("UTC-7", -7*3600)),
+	} {
+		if n := tr.Stats(now).PBsRecent; n != 1 {
+			t.Errorf("recent PBs at %v = %d, want 1 (30 August to 28 September)", now, n)
+		}
+	}
+}
+
 func mustDate(t *testing.T, s string) time.Time {
 	t.Helper()
 	d, _, err := parseDate(s)

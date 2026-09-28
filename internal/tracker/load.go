@@ -356,7 +356,9 @@ func parseDate(s string) (time.Time, bool, error) {
 	s = strings.TrimSpace(s)
 	for _, l := range dateLayouts {
 		if t, err := time.Parse(l.layout, s); err == nil {
-			return t, l.hasTime, nil
+			// Keep the date and time as written, dropping any UTC offset, so
+			// that plays with and without one are ordered by the player's clock.
+			return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC), l.hasTime, nil
 		}
 	}
 	return time.Time{}, false, fmt.Errorf("date %q is not in a recognised format (expected YYYY-MM-DD, optionally followed by a time such as 20:15)", s)

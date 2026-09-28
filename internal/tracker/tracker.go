@@ -68,6 +68,9 @@ type Play struct {
 	// History is the chart history this play belongs to.
 	History *ChartHistory
 
+	// Date is the date and time of the play as logged, on the player's clock.
+	// It is stored in UTC whatever the time zone, so that it reads back as
+	// written.
 	Date    time.Time
 	HasTime bool
 

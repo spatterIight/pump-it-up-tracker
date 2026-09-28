@@ -9,7 +9,8 @@ type Stats struct {
 	Fails  int
 	Songs  int
 	Charts int
-	// PBsRecent counts personal bests set in the 30 days up to now.
+	// PBsRecent counts personal bests set in the last 30 days, today
+	// included, going by the calendar in now's time zone.
 	PBsRecent int
 	// HighestSingle and HighestDouble are the highest levels cleared, 0 if none.
 	HighestSingle int
@@ -36,7 +37,10 @@ func (t *Tracker) Stats(now time.Time) Stats {
 		s.FirstPlay = t.Plays[0].Date
 		s.LastPlay = t.Plays[len(t.Plays)-1].Date
 	}
-	recent := now.AddDate(0, 0, -30)
+	// Play dates are on the player's clock, so compare calendar days rather
+	// than instants.
+	y, m, d := now.Date()
+	recent := time.Date(y, m, d-29, 0, 0, 0, 0, time.UTC)
 	for _, p := range t.Plays {
 		if p.IsPB && !p.Date.Before(recent) {
 			s.PBsRecent++
