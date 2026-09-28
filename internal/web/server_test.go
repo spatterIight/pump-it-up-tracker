@@ -279,6 +279,20 @@ func TestStaticCaching(t *testing.T) {
 	}
 }
 
+func TestNoStaticDirectoryListings(t *testing.T) {
+	h := newTestServer(t, "/")
+	// "/static/fonts" redirects to "/static/fonts/".
+	for _, path := range []string{"/static/", "/static/fonts/", "/static/fonts"} {
+		resp, body := get(t, h, path)
+		if (resp.StatusCode != http.StatusNotFound && resp.StatusCode != http.StatusMovedPermanently) || strings.Contains(body, ".woff2") {
+			t.Errorf("%s: status %d, body %.80q", path, resp.StatusCode, body)
+		}
+	}
+	if resp, _ := get(t, h, "/static/fonts/OFL-ChakraPetch.txt"); resp.StatusCode != 200 {
+		t.Errorf("font licence: status %d", resp.StatusCode)
+	}
+}
+
 func TestFormatting(t *testing.T) {
 	if got := formatInt(938204); got != "938,204" {
 		t.Errorf("formatInt = %q", got)

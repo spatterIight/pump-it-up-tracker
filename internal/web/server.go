@@ -230,6 +230,11 @@ func (s *Server) art(w http.ResponseWriter, r *http.Request) {
 func (s *Server) staticHandler() http.Handler {
 	files := http.FileServerFS(s.static)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Only files are served, not directory listings.
+		if r.URL.Path == "" || strings.HasSuffix(r.URL.Path, "/") {
+			http.NotFound(w, r)
+			return
+		}
 		if r.URL.Query().Get("v") == s.assetVersion {
 			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 		} else {
