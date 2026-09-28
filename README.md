@@ -103,7 +103,7 @@ Each play belongs to a version of Pump It Up, named by its `version` key. A play
 | `version` | Version | Grades | Checked |
 | --- | --- | --- | --- |
 | `phoenix` (default) | Pump It Up Phoenix | SSS+ to F | Everything in [Typo checks](#typo-checks) |
-| `prime2` | Pump It Up Prime 2 | SS, S, A, B, C, D, F | That a `score` is given, and is a whole multiple of 100 |
+| `prime2` | Pump It Up Prime 2 | SS, S, A, B, C, D, F | A `score` is given, as a multiple of 100; a `grade` is one of the version's; no `plate` |
 | `xx` | Pump It Up XX (20th Anniversary Edition) | SSS, SS, S, A, B, C, D, F | The same as Prime 2 |
 
 The version can also be written with capitals or spaces (`Prime 2`). Any other value is rejected, and the problem lists the supported ones.
@@ -159,7 +159,7 @@ The link belongs to the chart, not to the play, so it is enough on one play of t
 
 Linked charts form a **chart lineage**, and links can chain across several versions. The song page shows a lineage as one chart, listed under its newest version and labelled with each version's level, such as "S7 (Phoenix) → S8 (Next)":
 
-- **Attempts** span the whole lineage, and each play names its chart and version.
+- **Attempts** span the whole lineage. Each play names its chart, and has a version badge when it is from a version older than the newest one you played.
 - **Personal bests, first clear and best plate** carry across a link only when both versions use the same scoring system. Linking a Phoenix chart to the same chart in a future version that keeps Phoenix scoring continues its history: the next version's first play is compared with the best from Phoenix. Across a link between different scoring systems, such as Prime 2 → Phoenix, each version keeps its own. The page shows the newest version's personal best, with the older versions' bests beside it.
 - **Progress charts:** misses and perfect % do not depend on the scoring system, so they span the whole lineage, with a dashed line where it moves to another chart. The score chart spans the lineage only while the scoring system stays the same. Across different ones it is drawn in separate parts, one per scoring system, each headed with its versions, and never as one line.
 
@@ -170,7 +170,7 @@ Linked charts form a **chart lineage**, and links can chain across several versi
 Versions are listed in release order in [`internal/tracker/version.go`](internal/tracker/version.go). Each has an ID for the data file, a display name and a scoring system. Versions that share a scoring system share personal bests across chart links.
 
 - **If the new version keeps the scoring of the one before (such as Phoenix):** add a version entry after it, pointing at the same scoring system (`PhoenixScoring`). No scoring code is needed. Add tests to [`internal/tracker/versions_test.go`](internal/tracker/versions_test.go) that load real result screens of the version (as `testdata/result-screens.json` does for Prime 2 and XX).
-- **If it changes the scoring:** also write a new scoring system, which implements the `ScoringSystem` interface in [`internal/tracker/scoring.go`](internal/tracker/scoring.go): `ComputeScore`, `CheckScore`, `Grade`, `Grades`, `GradeThresholds`, `MaxScore` and `HasPlates`. Only check a score formula or grade table that reproduces every real result screen you have. Until one does, return `false` from `ComputeScore` and `Grade`, and the version's scores and grades are taken as logged, as for Prime 2 and XX. Add result screens to the tests, and describe what is checked in [Game versions](#game-versions).
+- **If it changes the scoring:** also write a new scoring system, which implements the `ScoringSystem` interface in [`internal/tracker/scoring.go`](internal/tracker/scoring.go): `Name`, `ComputeScore`, `CheckScore`, `Grade`, `Grades`, `GradeThresholds`, `MaxScore` and `HasPlates`. Only check a score formula or grade table that reproduces every real result screen you have. Until one does, return `false` from `ComputeScore` and `Grade`, and the version's scores and grades are taken as logged, as for Prime 2 and XX. Add result screens to the tests, and describe what is checked in [Game versions](#game-versions).
 
 Once the version is added, a play logs it with `version`, and `continues` links its charts to Phoenix's. When you log a play from it, it becomes the newest version played and the headline stats move to it. Adding a version is a minor release.
 
