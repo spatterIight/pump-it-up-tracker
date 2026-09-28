@@ -636,6 +636,8 @@ func build(data fileData) (*Tracker, error) {
 			titles = append(titles, key)
 		}
 	}
+	// The keys are lowercased titles, so this puts the songs in title order,
+	// ignoring case, and gives them their slugs in a stable order.
 	sort.Strings(titles)
 	for _, key := range titles {
 		s := songs[key]
@@ -650,10 +652,6 @@ func build(data fileData) (*Tracker, error) {
 			h.derive()
 		}
 	}
-	sort.SliceStable(t.Songs, func(i, j int) bool {
-		return strings.ToLower(t.Songs[i].Title) < strings.ToLower(t.Songs[j].Title)
-	})
-
 	t.Days = groupDays(t.Plays)
 	return t, nil
 }

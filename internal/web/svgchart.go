@@ -269,15 +269,15 @@ func writeGradeBands(b *strings.Builder, l layout, lo, hi float64, yOf func(floa
 	lastLabel := math.Inf(-1)
 	thresholds := tracker.GradeThresholds()
 	for i, t := range thresholds {
-		min := float64(t.Min)
-		if min <= lo || min > hi {
+		floor := float64(t.Min)
+		if floor <= lo || floor > hi {
 			continue
 		}
 		top := hi
 		if i > 0 {
 			top = math.Min(hi, float64(thresholds[i-1].Min))
 		}
-		y, yTop := yOf(min), yOf(top)
+		y, yTop := yOf(floor), yOf(top)
 		fmt.Fprintf(b, `<rect class="g-zone tier-%s" x="%g" y="%.1f" width="%g" height="%.1f"/>`, t.Grade.Tier(), l.padL, yTop, l.plotW(), y-yTop)
 		fmt.Fprintf(b, `<line class="g-grade-line tier-%s" x1="%g" x2="%g" y1="%.1f" y2="%.1f"/>`, t.Grade.Tier(), l.padL, l.padL+l.plotW(), y, y)
 		if y-lastLabel >= 14 {

@@ -18,7 +18,7 @@ func (s *Server) funcs() template.FuncMap {
 		"artURL":  func(slug string) string { return s.base + "/art/" + slug + "?v=" + s.opts.Art.Version(slug) },
 		"songURL": func(slug string) string { return s.base + "/song/" + slug },
 		"score":   formatInt,
-		"signed":  func(n int) string { return signed(n) },
+		"signed":  signed,
 		"date":    func(t time.Time) string { return t.Format("Mon 2 Jan 2006") },
 		"longDate": func(t time.Time) string {
 			return t.Format("Monday 2 January 2006")
