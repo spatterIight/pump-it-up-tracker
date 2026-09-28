@@ -294,10 +294,70 @@ func TestEveryProblemIsReported(t *testing.T) {
 	}
 }
 
+// A value of the wrong type names its entry and key, and does not hide the
+// problems in other entries.
+func TestTypeMistakesNameTheEntry(t *testing.T) {
+	ps := problems(t, `{"schema_version": 1,
+		"player": {"name": {}},
+		"songs": {"Big Daddy": {"bpm": [128]}},
+		"scores": [
+		{"song": "Big Daddy", "chart": "S11", "date": "2026-09-28", "score": "93x"},
+		{"song": "Nemesis", "chart": "S16", "date": "2026-09-28", "score": 1, "note": true},
+		{"song": "Conflict", "chart": "S15", "date": "2026-09-28", "score": 1, "kcal": "31 kcal"},
+		{"song": "DUEL", "chart": "S13", "date": "2026-09-08", "broken": "yes"},
+		{"song": "Vook", "chart": "S12", "date": "2026-09-28", "score": 1, "judgments": {"perfect": 1, "great": [31]}},
+		{"song": "Dignity", "chart": "Q1", "date": "2026-09-28", "score": 1},
+		5,
+		{"score": "93x", "max_combo": 2.5, "song": "Imprinting", "chart": "S11", "date": "2026-09-28"}
+	]}`)
+	want := []string{
+		`player.name: expected text, got a mapping`,
+		`songs: "Big Daddy": bpm: expected text, got a list`,
+		`scores[0] (Big Daddy S11): score: expected a whole number, got "93x"`,
+		`scores[1] (Nemesis S16): note: expected text, got true`,
+		`scores[2] (Conflict S15): kcal: expected a number, got text`,
+		`scores[3] (DUEL S13): broken: expected true or false, got text`,
+		`scores[4] (Vook S12): judgments.great: expected a whole number, got a list`,
+		`scores[5] (Dignity Q1): chart "Q1" is not in a recognised format`,
+		`scores[6]: expected a mapping, got 5`,
+		`scores[7] (Imprinting S11): score: expected a whole number, got "93x"`,
+		`scores[7] (Imprinting S11): max_combo: expected a whole number, got 2.5`,
+	}
+	if len(ps) != len(want) {
+		t.Fatalf("problems = %q, want %d", ps, len(want))
+	}
+	for i := range want {
+		if !strings.HasPrefix(ps[i], want[i]) {
+			t.Errorf("problem %d = %q, want %q", i, ps[i], want[i])
+		}
+	}
+}
+
+func TestUnreadableFiles(t *testing.T) {
+	for doc, want := range map[string]string{
+		"":                                  "the data file is empty",
+		" \n":                               "the data file is empty",
+		`{"schema_version": 1, "scores": [`: "the data file ends in the middle of the JSON document",
+		"{\"schema_version\": 1,\n  \"scores\": [{\"song\": \"Big Daddy\" \"chart\": \"S11\"}]}": `line 2, column 35: invalid character '"' after object key:value pair`,
+		"{\"schema_version\": 1, \"scores\": []}\n}":                                             "line 2, column 1: unexpected data after the end of the JSON document",
+		`{"schema_version": "1", "scores": []}`:                                                  "schema_version: expected a whole number, got text",
+	} {
+		ps := problems(t, doc)
+		if len(ps) != 1 || !strings.HasPrefix(ps[0], want) {
+			t.Errorf("%q: problems = %q, want %q", doc, ps, want)
+		}
+	}
+}
+
 func TestUnknownFieldsAreRejected(t *testing.T) {
 	wantProblem(t, `{"schema_version": 1, "scores": [{
 		"song": "Big Daddy", "chart": "S11", "date": "2026-09-28", "score": 938204, "perfects": 506
-	}]}`, `unknown field "perfects"`)
+	}]}`, `scores[0] (Big Daddy S11): unknown key "perfects" (expected song, chart, date, score, grade, plate, broken, judgments, max_combo, kcal, note)`)
+	wantProblem(t, `{"schema_version": 1, "scores": [{
+		"song": "Big Daddy", "chart": "S11", "date": "2026-09-28", "score": 938204,
+		"judgments": {"perfects": 506, "great": 31, "good": 11, "bad": 7, "miss": 6}
+	}]}`, `scores[0] (Big Daddy S11): judgments: unknown key "perfects" (expected perfect, great, good, bad, miss)`)
+	wantProblem(t, `{"schema_version": 1, "score": []}`, `unknown key "score" (expected schema_version, player, songs, scores)`)
 }
 
 func TestSchemaVersion(t *testing.T) {
@@ -432,6 +492,21 @@ func TestBestGradeIgnoresBreaksOnceCleared(t *testing.T) {
 	}
 }
 
+// A co-op chart's number is how many players it is for, not a level.
+func TestTopChartIgnoresCoOp(t *testing.T) {
+	tr := load(t, `{"schema_version": 1, "scores": [
+		{"song": "Big Daddy", "chart": "S3", "date": "2026-09-01", "score": 900000},
+		{"song": "Big Daddy", "chart": "CoOp4", "date": "2026-09-01", "score": 900000},
+		{"song": "Destination", "chart": "CoOp2", "date": "2026-09-01", "score": 900000}
+	]}`)
+	if top := tr.Songs[0].TopChart(); top == nil || top.Chart.String() != "S3" {
+		t.Errorf("Big Daddy top chart = %v, want S3", top)
+	}
+	if top := tr.Songs[1].TopChart(); top != nil {
+		t.Errorf("co-op only top chart = %v, want none", top.Chart)
+	}
+}
+
 func TestSlugify(t *testing.T) {
 	cases := map[string]string{
 		"Big Daddy": "big-daddy", "Kasou Shinja 仮装信者": "kasou-shinja", "U Got 2 Know": "u-got-2-know",
@@ -499,6 +574,43 @@ func TestStats(t *testing.T) {
 	for i := range want {
 		if s.BestGrades[i] != want[i] {
 			t.Errorf("best grades = %v, want %v", s.BestGrades, want)
+		}
+	}
+}
+
+// Dates are ordered and grouped by the player's clock, whether or not they
+// were written with a UTC offset.
+func TestDatesWithOffsetsKeepTheirClockTime(t *testing.T) {
+	tr := load(t, `{"schema_version": 1, "scores": [
+		{"song": "Big Daddy", "chart": "S11", "date": "2026-09-28T08:00:00+09:00", "score": 910000},
+		{"song": "Big Daddy", "chart": "S11", "date": "2026-09-28", "score": 900000},
+		{"song": "Big Daddy", "chart": "S11", "date": "2026-09-28T23:30:00-07:00", "score": 920000}
+	]}`)
+	var got []string
+	for _, p := range tr.Plays {
+		got = append(got, p.Date.Format("2006-01-02 15:04"))
+	}
+	if want := "2026-09-28 00:00,2026-09-28 08:00,2026-09-28 23:30"; strings.Join(got, ",") != want {
+		t.Errorf("plays = %v, want %s", got, want)
+	}
+	if len(tr.Days) != 1 {
+		t.Errorf("days = %d, want 1", len(tr.Days))
+	}
+}
+
+// "The last 30 days" is the same calendar days wherever the server is.
+func TestRecentPBsFollowTheCalendar(t *testing.T) {
+	tr := load(t, `{"schema_version": 1, "scores": [
+		{"song": "Big Daddy", "chart": "S11", "date": "2026-08-29", "score": 900000},
+		{"song": "Conflict", "chart": "S15", "date": "2026-08-30", "score": 900000}
+	]}`)
+	for _, now := range []time.Time{
+		time.Date(2026, 9, 28, 8, 0, 0, 0, time.FixedZone("UTC+10", 10*3600)),
+		time.Date(2026, 9, 28, 12, 0, 0, 0, time.UTC),
+		time.Date(2026, 9, 28, 20, 0, 0, 0, time.FixedZone("UTC-7", -7*3600)),
+	} {
+		if n := tr.Stats(now).PBsRecent; n != 1 {
+			t.Errorf("recent PBs at %v = %d, want 1 (30 August to 28 September)", now, n)
 		}
 	}
 }

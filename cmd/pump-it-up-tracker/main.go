@@ -124,12 +124,12 @@ func healthcheck() error {
 	if err != nil {
 		return err
 	}
-	_, port, err := net.SplitHostPort(c.listenAddress)
+	host, port, err := net.SplitHostPort(c.listenAddress)
 	if err != nil {
 		return err
 	}
 	client := &http.Client{Timeout: 4 * time.Second}
-	resp, err := client.Get("http://127.0.0.1:" + port + "/healthz")
+	resp, err := client.Get("http://" + probeAddress(host, port) + "/healthz")
 	if err != nil {
 		return err
 	}
@@ -138,6 +138,16 @@ func healthcheck() error {
 		return fmt.Errorf("healthz answered %s", resp.Status)
 	}
 	return nil
+}
+
+// probeAddress is where the server listening on host:port can be reached
+// from inside its container: loopback when it listens on every address,
+// otherwise the address it listens on.
+func probeAddress(host, port string) string {
+	if ip := net.ParseIP(host); host == "" || (ip != nil && ip.IsUnspecified()) {
+		host = "127.0.0.1"
+	}
+	return net.JoinHostPort(host, port)
 }
 
 func serve() error {

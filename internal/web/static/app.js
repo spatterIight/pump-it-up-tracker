@@ -76,7 +76,9 @@
     });
     search.addEventListener("input", filter);
     var savedSort = store("piu-sort");
-    if (savedSort && sort.querySelector('option[value="' + savedSort + '"]')) sort.value = savedSort;
+    each(sort.options, function (option) {
+      if (option.value === savedSort) sort.value = savedSort;
+    });
     sort.addEventListener("change", function () {
       store("piu-sort", sort.value);
       order();
@@ -110,7 +112,13 @@
       activate(tab.dataset.tab, true);
     });
   });
-  if (tabs.length && location.hash) activate(location.hash.slice(1), false);
+  if (tabs.length) {
+    if (location.hash) activate(location.hash.slice(1), false);
+    // Following a link to another chart of the same song only changes the hash.
+    window.addEventListener("hashchange", function () {
+      activate(location.hash.slice(1), false);
+    });
+  }
 
   // ---- Song page: metric switch ---------------------------------------------------
 

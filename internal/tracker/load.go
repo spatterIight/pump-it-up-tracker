@@ -9,11 +9,13 @@ import (
 	"io"
 	"math"
 	"os"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 	"unicode"
+	"unicode/utf8"
 )
 
 // SchemaVersion is the data file format this build reads.
@@ -28,11 +30,14 @@ func (e *ValidationError) Error() string {
 	return fmt.Sprintf("%d problem(s) in the score data:\n  - %s", len(e.Problems), strings.Join(e.Problems, "\n  - "))
 }
 
+// fileData is the top level of a data file. The player, each song and each
+// score are decoded on their own, so that a mistake in one of them can be
+// reported with its place in the file, alongside every other problem.
 type fileData struct {
-	SchemaVersion int                 `json:"schema_version"`
-	Player        playerData          `json:"player"`
-	Songs         map[string]songData `json:"songs"`
-	Scores        []scoreData         `json:"scores"`
+	SchemaVersion int                        `json:"schema_version"`
+	Player        json.RawMessage            `json:"player"`
+	Songs         map[string]json.RawMessage `json:"songs"`
+	Scores        []json.RawMessage          `json:"scores"`
 }
 
 type playerData struct {
@@ -83,7 +88,7 @@ func (f *flexString) UnmarshalJSON(b []byte) error {
 	}
 	var n json.Number
 	if err := json.Unmarshal(b, &n); err != nil {
-		return fmt.Errorf("expected text, got %s", b)
+		return typeError(b, reflect.TypeFor[flexString]())
 	}
 	*f = flexString(n.String())
 	return nil
@@ -98,22 +103,35 @@ func (f *flexInt) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &n); err == nil {
 		i, err := strconv.Atoi(n.String())
 		if err != nil {
-			return fmt.Errorf("expected a whole number, got %s", b)
+			return typeError(b, reflect.TypeFor[flexInt]())
 		}
 		*f = flexInt(i)
 		return nil
 	}
 	var s string
 	if err := json.Unmarshal(b, &s); err != nil {
-		return fmt.Errorf("expected a whole number, got %s", b)
+		return typeError(b, reflect.TypeFor[flexInt]())
 	}
 	cleaned := strings.NewReplacer(",", "", "_", "", " ", "").Replace(strings.TrimSpace(s))
 	i, err := strconv.Atoi(cleaned)
 	if err != nil {
-		return fmt.Errorf("expected a whole number, got %q", s)
+		return typeError(b, reflect.TypeFor[flexInt]())
 	}
 	*f = flexInt(i)
 	return nil
+}
+
+// typeError reports a value that does not fit a flexible type the way
+// encoding/json reports its own mismatches. Short values are quoted as written.
+func typeError(b []byte, t reflect.Type) error {
+	value := string(b)
+	switch b[0] {
+	case '{':
+		value = "object"
+	case '[':
+		value = "array"
+	}
+	return &json.UnmarshalTypeError{Value: value, Type: t}
 }
 
 // LoadFile reads and validates a data file.
@@ -129,21 +147,197 @@ func LoadFile(path string) (*Tracker, error) {
 // Load reads and validates score data. A *ValidationError lists every problem
 // found, so that they can all be fixed in one go.
 func Load(r io.Reader) (*Tracker, error) {
-	dec := json.NewDecoder(r)
-	dec.DisallowUnknownFields()
+	b, err := io.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+	dec := json.NewDecoder(bytes.NewReader(b))
+	var doc json.RawMessage
+	if err := dec.Decode(&doc); err != nil {
+		return nil, &ValidationError{Problems: []string{describeFileError(b, err)}}
+	}
+	end := dec.InputOffset()
+	if err := dec.Decode(new(json.RawMessage)); err != io.EOF {
+		rest := bytes.TrimLeft(b[end:], " \t\r\n")
+		return nil, &ValidationError{Problems: []string{
+			fmt.Sprintf("%s: unexpected data after the end of the JSON document", position(b, len(b)-len(rest))),
+		}}
+	}
 	var data fileData
-	if err := dec.Decode(&data); err != nil {
-		return nil, &ValidationError{Problems: []string{describeDecodeError(err)}}
+	if problems := decodeObject(doc, &data, ""); len(problems) > 0 {
+		return nil, &ValidationError{Problems: problems}
 	}
 	return build(data)
 }
 
+// decodeObject decodes the JSON object b into the struct v points to, one key
+// at a time, and returns every problem found, each naming its key (path is
+// the key b is under, if any). Going key by key reports every mistake rather
+// than the first, and names the key whatever the Go version: newer versions
+// of encoding/json leave it out of errors from UnmarshalJSON methods. Keys
+// match fields as they do in encoding/json, ignoring case.
+func decodeObject(b []byte, v any, path string) []string {
+	var problems []string
+	add := func(key, msg string) {
+		if key != "" {
+			msg = key + ": " + msg
+		}
+		problems = append(problems, msg)
+	}
+	// A key that is absent or null leaves the struct as it is.
+	if len(b) == 0 || bytes.Equal(b, []byte("null")) {
+		return nil
+	}
+	s := reflect.ValueOf(v).Elem()
+	dec := json.NewDecoder(bytes.NewReader(b))
+	if tok, err := dec.Token(); err != nil || tok != json.Delim('{') {
+		add(path, describeDecodeError(typeError(b, s.Type())))
+		return problems
+	}
+	for dec.More() {
+		tok, err := dec.Token()
+		if err != nil {
+			add(path, err.Error())
+			return problems
+		}
+		key := tok.(string)
+		var value json.RawMessage
+		if err := dec.Decode(&value); err != nil {
+			add(path, err.Error())
+			return problems
+		}
+		keyPath := key
+		if path != "" {
+			keyPath = path + "." + key
+		}
+		i, ok := fieldForKey(s.Type(), key)
+		if !ok {
+			add(path, fmt.Sprintf("unknown key %q (expected %s)", key, keyNames(s.Type())))
+			continue
+		}
+		field := s.Field(i)
+		if t := field.Type(); t.Kind() == reflect.Pointer && t.Elem().Kind() == reflect.Struct && !bytes.Equal(value, []byte("null")) {
+			nested := reflect.New(t.Elem())
+			problems = append(problems, decodeObject(value, nested.Interface(), keyPath)...)
+			field.Set(nested)
+			continue
+		}
+		if err := json.Unmarshal(value, field.Addr().Interface()); err != nil {
+			add(keyPath, describeDecodeError(err))
+		}
+	}
+	return problems
+}
+
+// fieldForKey finds the field of the struct type t that a JSON key decodes
+// into: the one of that name, otherwise one whose name matches ignoring case.
+func fieldForKey(t reflect.Type, key string) (int, bool) {
+	match := -1
+	for i := range t.NumField() {
+		name := keyName(t.Field(i))
+		if name == key {
+			return i, true
+		}
+		if match < 0 && strings.EqualFold(name, key) {
+			match = i
+		}
+	}
+	return match, match >= 0
+}
+
+func keyName(f reflect.StructField) string {
+	name, _, _ := strings.Cut(f.Tag.Get("json"), ",")
+	if name == "" {
+		name = f.Name
+	}
+	return name
+}
+
+// keyNames lists the keys the struct type t has, for a problem report.
+func keyNames(t reflect.Type) string {
+	names := make([]string, t.NumField())
+	for i := range names {
+		names[i] = keyName(t.Field(i))
+	}
+	return strings.Join(names, ", ")
+}
+
+// describeFileError explains why the data file as a whole could not be read.
+func describeFileError(b []byte, err error) string {
+	var syntaxErr *json.SyntaxError
+	switch {
+	case errors.Is(err, io.EOF):
+		return "the data file is empty"
+	case errors.Is(err, io.ErrUnexpectedEOF):
+		return "the data file ends in the middle of the JSON document; it may have been cut short"
+	case errors.As(err, &syntaxErr):
+		return fmt.Sprintf("%s: %s", position(b, int(syntaxErr.Offset)-1), syntaxErr.Error())
+	}
+	return describeDecodeError(err)
+}
+
+// position describes where the byte at index i is, as "line 3, column 12".
+func position(b []byte, i int) string {
+	i = max(0, min(i, len(b)))
+	lineStart := bytes.LastIndexByte(b[:i], '\n') + 1
+	return fmt.Sprintf("line %d, column %d", bytes.Count(b[:i], []byte("\n"))+1, utf8.RuneCount(b[lineStart:i])+1)
+}
+
+// describeDecodeError explains why a value could not be decoded, in the terms
+// of the YAML it was written in.
 func describeDecodeError(err error) string {
 	var typeErr *json.UnmarshalTypeError
 	if errors.As(err, &typeErr) {
-		return fmt.Sprintf("%s: expected %s, got a JSON %s", typeErr.Field, typeErr.Type, typeErr.Value)
+		return fmt.Sprintf("expected %s, got %s", describeType(typeErr.Type), describeValue(typeErr.Value))
 	}
-	return err.Error()
+	return strings.TrimPrefix(err.Error(), "json: ")
+}
+
+func describeType(t reflect.Type) string {
+	switch t {
+	case reflect.TypeFor[flexInt]():
+		return "a whole number"
+	case reflect.TypeFor[flexString]():
+		return "text"
+	}
+	switch t.Kind() {
+	case reflect.Bool:
+		return "true or false"
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return "a whole number"
+	case reflect.Float32, reflect.Float64:
+		return "a number"
+	case reflect.String:
+		return "text"
+	case reflect.Struct, reflect.Map:
+		return "a mapping"
+	case reflect.Slice, reflect.Array:
+		return "a list"
+	case reflect.Pointer:
+		return describeType(t.Elem())
+	}
+	return t.String()
+}
+
+// describeValue turns the kind of value encoding/json reports ("string",
+// "number 1.5") into words. Values quoted by typeError are kept as they are.
+func describeValue(v string) string {
+	switch {
+	case v == "string":
+		return "text"
+	case v == "number":
+		return "a number"
+	case v == "bool":
+		return "a true/false value"
+	case v == "array":
+		return "a list"
+	case v == "object":
+		return "a mapping"
+	case strings.HasPrefix(v, "number "):
+		return strings.TrimPrefix(v, "number ")
+	}
+	return v
 }
 
 var dateLayouts = []struct {
@@ -162,7 +356,9 @@ func parseDate(s string) (time.Time, bool, error) {
 	s = strings.TrimSpace(s)
 	for _, l := range dateLayouts {
 		if t, err := time.Parse(l.layout, s); err == nil {
-			return t, l.hasTime, nil
+			// Keep the date and time as written, dropping any UTC offset, so
+			// that plays with and without one are ordered by the player's clock.
+			return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC), l.hasTime, nil
 		}
 	}
 	return time.Time{}, false, fmt.Errorf("date %q is not in a recognised format (expected YYYY-MM-DD, optionally followed by a time such as 20:15)", s)
@@ -179,8 +375,10 @@ func build(data fileData) (*Tracker, error) {
 		return nil, &ValidationError{Problems: problems}
 	}
 
+	var player playerData
+	problems = append(problems, decodeObject(data.Player, &player, "player")...)
 	t := &Tracker{
-		Player:      strings.TrimSpace(string(data.Player.Name)),
+		Player:      strings.TrimSpace(string(player.Name)),
 		songsBySlug: map[string]*Song{},
 	}
 
@@ -194,10 +392,16 @@ func build(data fileData) (*Tracker, error) {
 	}
 	sort.Strings(metaTitles)
 	for _, title := range metaTitles {
-		meta := data.Songs[title]
 		clean := strings.TrimSpace(title)
 		if clean == "" {
 			addf("songs: a song has an empty title")
+			continue
+		}
+		var meta songData
+		if ps := decodeObject(data.Songs[title], &meta, ""); len(ps) > 0 {
+			for _, p := range ps {
+				addf("songs: %q: %s", clean, p)
+			}
 			continue
 		}
 		key := strings.ToLower(clean)
@@ -215,11 +419,20 @@ func build(data fileData) (*Tracker, error) {
 
 	histories := map[*Song]map[Chart]*ChartHistory{}
 
-	for i, raw := range data.Scores {
+	for i, entry := range data.Scores {
+		// The keys that could be read still name the entry.
+		var raw scoreData
+		decodeProblems := decodeObject(entry, &raw, "")
 		title := strings.TrimSpace(string(raw.Song))
 		where := fmt.Sprintf("scores[%d]", i)
 		if title != "" {
 			where = fmt.Sprintf("scores[%d] (%s %s)", i, title, strings.TrimSpace(string(raw.Chart)))
+		}
+		if len(decodeProblems) > 0 {
+			for _, p := range decodeProblems {
+				addf("%s: %s", where, p)
+			}
+			continue
 		}
 		entryProblems := len(problems)
 
@@ -423,6 +636,8 @@ func build(data fileData) (*Tracker, error) {
 			titles = append(titles, key)
 		}
 	}
+	// The keys are lowercased titles, so this puts the songs in title order,
+	// ignoring case, and gives them their slugs in a stable order.
 	sort.Strings(titles)
 	for _, key := range titles {
 		s := songs[key]
@@ -437,10 +652,6 @@ func build(data fileData) (*Tracker, error) {
 			h.derive()
 		}
 	}
-	sort.SliceStable(t.Songs, func(i, j int) bool {
-		return strings.ToLower(t.Songs[i].Title) < strings.ToLower(t.Songs[j].Title)
-	})
-
 	t.Days = groupDays(t.Plays)
 	return t, nil
 }

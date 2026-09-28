@@ -59,7 +59,7 @@ func TestPages(t *testing.T) {
 		status int
 		want   []string
 	}{
-		{"/", 200, []string{"PUMP IT UP", "Latest session", `href="/song/big-daddy"`, "Kasou Shinja 仮装信者", `data-modes="single"`, "Hardest clears", "36 plays (7 failed)"}},
+		{"/", 200, []string{"PUMP IT UP", "Latest session", `href="/song/big-daddy"`, "Kasou Shinja 仮装信者", `data-modes="single"`, `data-title="Destination" data-modes="coop" data-level=""`, "Hardest clears", "36 plays (7 failed)"}},
 		{"/song/big-daddy", 200, []string{"<h1 class=\"display\">Big Daddy</h1>", "938,204", "Talented Game", "graph-svg is-wide", "graph-svg is-narrow", "506", "31.1", "First clear"}},
 		{"/song/nemesis", 200, []string{"Stage break", "died at the drill section", `data-tab="s16"`}},
 		{"/song/destination", 200, []string{"CO-OP x2", "with Sam"}},
@@ -276,6 +276,20 @@ func TestStaticCaching(t *testing.T) {
 	}
 	if resp, _ := get(t, h, "/static/app.css"); resp.Header.Get("Cache-Control") != "no-cache" {
 		t.Errorf("unversioned asset cache = %q", resp.Header.Get("Cache-Control"))
+	}
+}
+
+func TestNoStaticDirectoryListings(t *testing.T) {
+	h := newTestServer(t, "/")
+	// "/static/fonts" redirects to "/static/fonts/".
+	for _, path := range []string{"/static/", "/static/fonts/", "/static/fonts"} {
+		resp, body := get(t, h, path)
+		if (resp.StatusCode != http.StatusNotFound && resp.StatusCode != http.StatusMovedPermanently) || strings.Contains(body, ".woff2") {
+			t.Errorf("%s: status %d, body %.80q", path, resp.StatusCode, body)
+		}
+	}
+	if resp, _ := get(t, h, "/static/fonts/OFL-ChakraPetch.txt"); resp.StatusCode != 200 {
+		t.Errorf("font licence: status %d", resp.StatusCode)
 	}
 }
 

@@ -68,6 +68,9 @@ type Play struct {
 	// History is the chart history this play belongs to.
 	History *ChartHistory
 
+	// Date is the date and time of the play as logged, on the player's clock.
+	// It is stored in UTC whatever the time zone, so that it reads back as
+	// written.
 	Date    time.Time
 	HasTime bool
 
@@ -151,10 +154,14 @@ func (s *Song) BestGrade() Grade {
 }
 
 // TopChart returns the hardest chart played, preferring doubles over singles
-// at the same level.
+// at the same level. A co-op chart's number is its player count rather than
+// a level, so co-op charts are left out: it is nil when only they were played.
 func (s *Song) TopChart() *ChartHistory {
 	var top *ChartHistory
 	for _, c := range s.Charts {
+		if c.Chart.Mode == ModeCoOp {
+			continue
+		}
 		if top == nil || c.Chart.Level > top.Chart.Level || (c.Chart.Level == top.Chart.Level && c.Chart.Mode > top.Chart.Mode) {
 			top = c
 		}

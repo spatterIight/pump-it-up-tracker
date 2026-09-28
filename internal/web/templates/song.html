@@ -20,7 +20,7 @@
 
 <nav class="chart-tabs" role="tablist" aria-label="Charts">
   {{range $i, $h := .Charts}}
-  <a class="chart-tab{{if eq $i 0}} is-active{{end}}" role="tab" href="#{{.Chart.Key}}" data-tab="{{.Chart.Key}}" aria-selected="{{if eq $i 0}}true{{else}}false{{end}}">
+  <a class="chart-tab{{if eq $i 0}} is-active{{end}}" role="tab" href="#{{.Chart.Key}}" data-tab="{{.Chart.Key}}" aria-controls="{{.Chart.Key}}" aria-selected="{{if eq $i 0}}true{{else}}false{{end}}">
     {{template "ball" .Chart}}
     <span class="chart-tab-text">
       <span class="chart-tab-name">{{.Chart.Mode.Name}} {{.Chart.Ball}}</span>

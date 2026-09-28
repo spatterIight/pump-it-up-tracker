@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -111,7 +112,8 @@ func (f Fandom) URLs(ctx context.Context, s Song) ([]string, error) {
 			} `json:"pages"`
 		} `json:"query"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+	// The answer is a few hundred bytes; don't read an unbounded one.
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&body); err != nil {
 		return nil, fmt.Errorf("wiki API: %w", err)
 	}
 	var out []string

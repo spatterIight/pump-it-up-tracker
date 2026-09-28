@@ -1,5 +1,5 @@
 # The builder image can be swapped for a mirror of the same image.
-ARG GO_IMAGE=docker.io/library/golang:1.24-alpine
+ARG GO_IMAGE=docker.io/library/golang:1.27-alpine
 
 FROM --platform=$BUILDPLATFORM ${GO_IMAGE} AS build
 

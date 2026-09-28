@@ -2,6 +2,7 @@ package tracker
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -11,12 +12,15 @@ const MaxScore = 1_000_000
 // Grade is a letter grade as awarded by Pump It Up Phoenix.
 type Grade string
 
-// gradeThresholds lists every grade with the minimum score that earns it,
-// best first.
-var gradeThresholds = []struct {
+// GradeThreshold is a grade together with the minimum score that earns it.
+type GradeThreshold struct {
 	Grade Grade
 	Min   int
-}{
+}
+
+// gradeThresholds lists every grade with the minimum score that earns it,
+// best first.
+var gradeThresholds = []GradeThreshold{
 	{"SSS+", 995_000},
 	{"SSS", 990_000},
 	{"SS+", 985_000},
@@ -45,20 +49,8 @@ func GradeForScore(score int) Grade {
 	return "F"
 }
 
-// GradeThreshold is a grade together with the minimum score that earns it.
-type GradeThreshold struct {
-	Grade Grade
-	Min   int
-}
-
 // GradeThresholds returns every grade with its minimum score, best first.
-func GradeThresholds() []GradeThreshold {
-	out := make([]GradeThreshold, len(gradeThresholds))
-	for i, t := range gradeThresholds {
-		out[i] = GradeThreshold{t.Grade, t.Min}
-	}
-	return out
-}
+func GradeThresholds() []GradeThreshold { return slices.Clone(gradeThresholds) }
 
 func parseGrade(s string) (Grade, bool) {
 	g := Grade(strings.ToUpper(strings.ReplaceAll(strings.TrimSpace(s), " ", "")))
