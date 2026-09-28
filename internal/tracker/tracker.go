@@ -151,10 +151,14 @@ func (s *Song) BestGrade() Grade {
 }
 
 // TopChart returns the hardest chart played, preferring doubles over singles
-// at the same level.
+// at the same level. A co-op chart's number is its player count rather than
+// a level, so co-op charts are left out: it is nil when only they were played.
 func (s *Song) TopChart() *ChartHistory {
 	var top *ChartHistory
 	for _, c := range s.Charts {
+		if c.Chart.Mode == ModeCoOp {
+			continue
+		}
 		if top == nil || c.Chart.Level > top.Chart.Level || (c.Chart.Level == top.Chart.Level && c.Chart.Mode > top.Chart.Mode) {
 			top = c
 		}

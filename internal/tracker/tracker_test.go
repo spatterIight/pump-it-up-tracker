@@ -492,6 +492,21 @@ func TestBestGradeIgnoresBreaksOnceCleared(t *testing.T) {
 	}
 }
 
+// A co-op chart's number is how many players it is for, not a level.
+func TestTopChartIgnoresCoOp(t *testing.T) {
+	tr := load(t, `{"schema_version": 1, "scores": [
+		{"song": "Big Daddy", "chart": "S3", "date": "2026-09-01", "score": 900000},
+		{"song": "Big Daddy", "chart": "CoOp4", "date": "2026-09-01", "score": 900000},
+		{"song": "Destination", "chart": "CoOp2", "date": "2026-09-01", "score": 900000}
+	]}`)
+	if top := tr.Songs[0].TopChart(); top == nil || top.Chart.String() != "S3" {
+		t.Errorf("Big Daddy top chart = %v, want S3", top)
+	}
+	if top := tr.Songs[1].TopChart(); top != nil {
+		t.Errorf("co-op only top chart = %v, want none", top.Chart)
+	}
+}
+
 func TestSlugify(t *testing.T) {
 	cases := map[string]string{
 		"Big Daddy": "big-daddy", "Kasou Shinja 仮装信者": "kasou-shinja", "U Got 2 Know": "u-got-2-know",
