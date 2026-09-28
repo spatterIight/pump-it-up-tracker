@@ -1,0 +1,63 @@
+song Big Daddy slug=big-daddy best=AA+
+  chart S11 best=938204/AA+ cleared=true plate=TG fewest=13 perfect=90.196
+    2026-08-23T00:00 score=902311 grade=AA plate=FG broken=false pb=true first=true prev=0 combo=-1 kcal=-1
+    2026-09-13T00:00 score=921474 grade=AA plate=TG broken=false pb=true first=false prev=902311 combo=-1 kcal=-1
+    2026-09-28T18:45 score=938204 grade=AA+ plate=TG broken=false pb=true first=false prev=921474 combo=294 kcal=31.137
+song Conflict slug=conflict best=AA
+  chart S15 best=912850/AA cleared=true plate=FG fewest=23 perfect=85.128
+    2026-08-02T00:00 score=858669 grade=A+ plate=FG broken=false pb=true first=true prev=0 combo=523 kcal=-1
+    2026-08-23T00:00 score=880430 grade=A+ plate=FG broken=false pb=true first=false prev=858669 combo=475 kcal=-1
+    2026-09-13T20:40 score=903100 grade=AA plate=FG broken=false pb=true first=false prev=880430 combo=330 kcal=-1
+    2026-09-27T19:05 score=912850 grade=AA plate=FG broken=false pb=true first=false prev=903100 combo=458 kcal=34.2
+  chart D13 best=868984/A+ cleared=true plate=FG fewest=31 perfect=77.681
+    2026-09-20T00:00 score=868984 grade=A+ plate=FG broken=false pb=true first=true prev=0 combo=301 kcal=-1
+song Destination slug=destination best=AA
+  chart CO-OP x2 best=919600/AA cleared=true plate=TG fewest=13 perfect=86.154
+    2026-09-20T00:00 score=919600 grade=AA plate=TG broken=false pb=true first=true prev=0 combo=198 kcal=-1
+song Dignity slug=dignity best=AA+
+  chart S12 best=931932/AA+ cleared=true plate=TG fewest=15 perfect=88.525
+    2026-08-09T00:00 score=901619 grade=AA plate=FG broken=false pb=true first=true prev=0 combo=269 kcal=-1
+    2026-08-23T00:00 score=897172 grade=A+ plate=FG broken=false pb=false first=false prev=901619 combo=423 kcal=-1
+    2026-09-20T00:00 score=931932 grade=AA+ plate=TG broken=false pb=true first=false prev=901619 combo=425 kcal=-1
+song Imprinting slug=imprinting best=AA+
+  chart S11 best=947566/AA+ cleared=true plate=MG fewest=8 perfect=90.800
+    2026-08-09T00:00 score=916804 grade=AA plate=TG broken=false pb=true first=true prev=0 combo=220 kcal=-1
+    2026-09-20T00:00 score=947566 grade=AA+ plate=MG broken=false pb=true first=false prev=916804 combo=351 kcal=-1
+song Kasou Shinja 仮装信者 slug=kasou-shinja best=A+
+  chart S13 best=897639/A+ cleared=true plate=FG fewest=23 perfect=82.459
+    2026-09-06T00:00 score=884914 grade=A+ plate=FG broken=false pb=true first=true prev=0 combo=420 kcal=-1
+    2026-09-28T18:20 score=897639 grade=A+ plate=FG broken=false pb=true first=false prev=884914 combo=460 kcal=-1
+song Love is a Danger Zone slug=love-is-a-danger-zone best=S
+  chart S9 best=972582/S cleared=true plate=SG fewest=3 perfect=95.526
+    2026-08-02T00:00 score=956713 grade=AAA plate=SG broken=false pb=true first=true prev=0 combo=314 kcal=-1
+    2026-08-09T00:00 score=972582 grade=S plate=SG broken=false pb=true first=false prev=956713 combo=147 kcal=-1
+song Nemesis slug=nemesis best=AA+
+  chart S13 best=930139/AA+ cleared=true plate=TG fewest=13 perfect=87.963
+    2026-08-02T00:00 score=892173 grade=A+ plate=TG broken=false pb=true first=true prev=0 combo=377 kcal=-1
+    2026-08-09T00:00 score=905533 grade=AA plate=TG broken=false pb=true first=false prev=892173 combo=208 kcal=-1
+    2026-09-06T00:00 score=930139 grade=AA+ plate=TG broken=false pb=true first=false prev=905533 combo=378 kcal=-1
+  chart S16 best=838531/A+ cleared=true plate=RG fewest=46 perfect=72.073
+    2026-09-13T21:10 score=444905 grade=F plate= broken=true pb=false first=false prev=0 combo=230 kcal=-1
+    2026-09-27T19:40 score=838531 grade=A+ plate=RG broken=false pb=true first=true prev=0 combo=428 kcal=38.9
+song Rock the house slug=rock-the-house best=AA
+  chart S14 best=908578/AA cleared=true plate=FG fewest=22 perfect=84.429
+    2026-08-23T00:00 score=862847 grade=A+ plate=FG broken=false pb=true first=true prev=0 combo=523 kcal=-1
+    2026-09-06T00:00 score=889622 grade=A+ plate=FG broken=false pb=true first=false prev=862847 combo=590 kcal=-1
+    2026-09-27T20:15 score=908578 grade=AA plate=FG broken=false pb=true first=false prev=889622 combo=438 kcal=29.8
+song U Got 2 Know slug=u-got-2-know best=AA
+  chart SP12 best=900188/AA cleared=true plate=TG fewest=19 perfect=82.712
+    2026-09-13T00:00 score=900188 grade=AA plate=TG broken=false pb=true first=true prev=0 combo=215 kcal=-1
+song Vook slug=vook best=AAA+
+  chart S10 best=969192/AAA+ cleared=true plate=SG fewest=4 perfect=95.238
+    2026-08-02T00:00 score=957330 grade=AAA plate=SG broken=false pb=true first=true prev=0 combo=179 kcal=-1
+    2026-09-06T00:00 score=969192 grade=AAA+ plate=SG broken=false pb=true first=false prev=957330 combo=260 kcal=-1
+  chart S12 best=907497/AA cleared=true plate=TG fewest=18 perfect=84.286
+    2026-09-13T20:05 score=907497 grade=AA plate=TG broken=false pb=true first=true prev=0 combo=289 kcal=-1
+day 2026-09-28 plays=2 pbs=2 kcal=31.137
+day 2026-09-27 plays=3 pbs=3 kcal=102.89999999999999
+day 2026-09-20 plays=4 pbs=4 kcal=-1
+day 2026-09-13 plays=5 pbs=4 kcal=-1
+day 2026-09-06 plays=4 pbs=4 kcal=-1
+day 2026-08-23 plays=4 pbs=3 kcal=-1
+day 2026-08-09 plays=4 pbs=4 kcal=-1
+day 2026-08-02 plays=4 pbs=4 kcal=-1

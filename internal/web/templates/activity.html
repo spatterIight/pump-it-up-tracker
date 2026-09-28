@@ -2,7 +2,7 @@
 <section class="page-head">
   <p class="eyebrow">Activity</p>
   <h1 class="display">Sessions</h1>
-  {{if .Days}}<p class="lede">{{plural (len .Days) "day" "days"}} at the cabinet · {{plural .Stats.Plays "play" "plays"}}{{if ge .Stats.Kcal 0.0}} · {{kcal .Stats.Kcal}} kcal{{end}}</p>{{end}}
+  {{if .Days}}<p class="lede">{{plural (len .Days) "day" "days"}} at the cabinet · {{plural .Stats.Plays "play" "plays"}}{{if .Stats.Fails}} ({{.Stats.Fails}} failed){{end}}{{if ge .Stats.Kcal 0.0}} · {{kcal .Stats.Kcal}} kcal{{end}}</p>{{end}}
 </section>
 
 {{range .Days}}
@@ -21,14 +21,14 @@
   <ol class="play-list">
     {{range .Plays}}
     <li>
-      <a class="play-row{{if .IsPB}} is-pb{{end}}{{if .Broken}} is-broken{{end}}" href="{{songURL .Song.Slug}}#{{.Chart.Key}}">
+      <a class="play-row{{if .IsPB}} is-pb{{end}}{{if .Broken}} is-broken{{end}}{{if not .HasScore}} is-failed{{end}}" href="{{songURL .Song.Slug}}#{{.Chart.Key}}">
         <span class="frame play-thumb"><img src="{{artURL .Song.Slug}}" alt="" loading="lazy" width="700" height="393"></span>
         <span class="play-title">
           <span class="play-song">{{.Song.Title}}</span>
           <span class="play-sub">{{.Chart.Mode.Name}} {{.Chart.Ball}}{{if .HasTime}} · {{clock .Date}}{{end}}</span>
         </span>
         {{template "ball" .Chart}}
-        <span class="play-score"><span class="play-score-num">{{score .Score}}</span>{{template "delta" .}}</span>
+        <span class="play-score"><span class="play-score-num">{{template "play-score" .}}</span>{{template "delta" .}}</span>
         <span class="play-grade">{{template "grade" .Grade}}{{template "plate-short" .Plate}}</span>
       </a>
     </li>

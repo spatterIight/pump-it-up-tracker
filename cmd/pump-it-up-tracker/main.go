@@ -114,7 +114,8 @@ func validate(args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s is valid: %d plays of %d songs\n", path, len(t.Plays), len(t.Songs))
+	s := t.Stats(time.Now())
+	fmt.Printf("%s is valid: %d plays of %d songs, %d of them failed\n", path, s.Plays, s.Songs, s.Fails)
 	return nil
 }
 

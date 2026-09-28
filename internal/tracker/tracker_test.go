@@ -2,6 +2,9 @@ package tracker
 
 import (
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -178,6 +181,100 @@ func TestBrokenPlaysSkipChecks(t *testing.T) {
 	}
 }
 
+func TestNoScoreFail(t *testing.T) {
+	tr := load(t, `{"schema_version": 1, "scores": [
+		{"song": "DUEL", "chart": "S13", "date": "2026-09-08", "broken": true, "kcal": 12.5, "note": "life bar gone at the break"}
+	]}`)
+	p := tr.Plays[0]
+	if p.HasScore() || p.Score != -1 || p.Grade != "" || p.Plate != "" || p.Judgments != nil || p.MaxCombo != -1 || !p.Broken {
+		t.Errorf("no-score fail = %+v", p)
+	}
+	if p.Kcal != 12.5 || p.Note != "life bar gone at the break" || p.IsPB || p.FirstClear {
+		t.Errorf("no-score fail = %+v", p)
+	}
+	h := tr.Songs[0].Charts[0]
+	if h.Best != nil || h.Cleared || h.Clears != 0 || h.Fails != 1 || h.BestPlate != "" {
+		t.Errorf("chart = best %v cleared %v clears %d fails %d plate %q", h.Best, h.Cleared, h.Clears, h.Fails, h.BestPlate)
+	}
+	if g := tr.Songs[0].BestGrade(); g != "" {
+		t.Errorf("BestGrade = %q, want none", g)
+	}
+}
+
+func TestNoScoreFailRejectsResultKeys(t *testing.T) {
+	for key, value := range map[string]string{
+		"grade":     `"F"`,
+		"plate":     `"RG"`,
+		"judgments": `{"perfect": 300, "great": 31, "good": 11, "bad": 7, "miss": 60}`,
+		"max_combo": `120`,
+	} {
+		wantProblem(t, `{"schema_version": 1, "scores": [
+			{"song": "DUEL", "chart": "S13", "date": "2026-09-08", "broken": true, "`+key+`": `+value+`}
+		]}`, "scores[0] (DUEL S13): a broken play without a score", "cannot have "+key+" ")
+	}
+	// Every extra key is named in one problem.
+	ps := problems(t, `{"schema_version": 1, "scores": [
+		{"song": "DUEL", "chart": "S13", "date": "2026-09-08", "broken": true, "grade": "F", "max_combo": 120}
+	]}`)
+	if len(ps) != 1 || !strings.Contains(ps[0], "cannot have grade or max_combo") {
+		t.Errorf("problems = %q", ps)
+	}
+}
+
+func TestScoreIsStillRequiredUnlessBroken(t *testing.T) {
+	wantProblem(t, `{"schema_version": 1, "scores": [
+		{"song": "DUEL", "chart": "S13", "date": "2026-09-08"}
+	]}`, "scores[0] (DUEL S13): score is required", "add broken: true")
+	wantProblem(t, `{"schema_version": 1, "scores": [
+		{"song": "DUEL", "chart": "S13", "date": "2026-09-08", "broken": false}
+	]}`, "score is required")
+}
+
+// A stage break whose judgments and max combo are both given still has a
+// score, worked out from them.
+func TestBrokenPlayWithJudgmentsHasAScore(t *testing.T) {
+	tr := load(t, `{"schema_version": 1, "scores": [{
+		"song": "Big Daddy", "chart": "S11", "date": "2026-09-28", "broken": true,
+		"judgments": {"perfect": 506, "great": 31, "good": 11, "bad": 7, "miss": 6}, "max_combo": 294
+	}]}`)
+	if p := tr.Plays[0]; p.Score != 938204 || p.Grade != "AA+" || tr.Songs[0].Charts[0].Best != p {
+		t.Errorf("play = %+v", p)
+	}
+}
+
+func TestFileFromVersion1_0LoadsUnchanged(t *testing.T) {
+	tr, err := LoadFile(filepath.Join("testdata", "tracker-1.0.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := os.ReadFile(filepath.Join("testdata", "tracker-1.0.golden"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := snapshot(tr); got != string(want) {
+		t.Errorf("derived data changed:\n%s", got)
+	}
+}
+
+// snapshot prints everything derived from a data file, in the format of
+// testdata/tracker-1.0.golden, which was written by version 1.0.1.
+func snapshot(t *Tracker) string {
+	var b strings.Builder
+	for _, s := range t.Songs {
+		fmt.Fprintf(&b, "song %s slug=%s best=%s\n", s.Title, s.Slug, s.BestGrade())
+		for _, h := range s.Charts {
+			fmt.Fprintf(&b, "  chart %s best=%d/%s cleared=%v plate=%s fewest=%d perfect=%.3f\n", h.Chart, h.Best.Score, h.Best.Grade, h.Cleared, h.BestPlate, h.FewestMisses, h.BestPerfectRate)
+			for _, p := range h.Plays {
+				fmt.Fprintf(&b, "    %s score=%d grade=%s plate=%s broken=%v pb=%v first=%v prev=%d combo=%d kcal=%g\n", p.Date.Format("2006-01-02T15:04"), p.Score, p.Grade, p.Plate, p.Broken, p.IsPB, p.FirstClear, p.PrevBest, p.MaxCombo, p.Kcal)
+			}
+		}
+	}
+	for _, d := range t.Days {
+		fmt.Fprintf(&b, "day %s plays=%d pbs=%d kcal=%g\n", d.Date.Format("2006-01-02"), len(d.Plays), d.PBs, d.Kcal)
+	}
+	return b.String()
+}
+
 func TestEveryProblemIsReported(t *testing.T) {
 	ps := problems(t, `{"schema_version": 1, "scores": [
 		{"song": "", "chart": "Q9", "date": "yesterday"},
@@ -256,6 +353,82 @@ func TestHistoryAndPersonalBests(t *testing.T) {
 	}
 	if d := tr.Days[0]; len(d.Plays) != 4 || d.PBs != 3 || d.Kcal != 41.5 {
 		t.Errorf("latest day: plays %d PBs %d kcal %v", len(d.Plays), d.PBs, d.Kcal)
+	}
+}
+
+func TestFailsAroundClears(t *testing.T) {
+	tr := load(t, `{"schema_version": 1, "scores": [
+		{"song": "Only Fails", "chart": "S12", "date": "2026-08-24", "broken": true},
+		{"song": "Only Fails", "chart": "S12", "date": "2026-09-03", "broken": true},
+		{"song": "Fails Then Clear", "chart": "S13", "date": "2026-08-01", "broken": true},
+		{"song": "Fails Then Clear", "chart": "S13", "date": "2026-08-02", "score": 612000, "grade": "F", "broken": true},
+		{"song": "Fails Then Clear", "chart": "S13", "date": "2026-08-03", "score": 801000, "plate": "RG"},
+		{"song": "Clear Then Fails", "chart": "D14", "date": "2026-08-01", "score": 850000, "plate": "FG"},
+		{"song": "Clear Then Fails", "chart": "D14", "date": "2026-08-10", "broken": true},
+		{"song": "Clear Then Fails", "chart": "D14", "date": "2026-08-11", "score": 700000, "broken": true},
+		{"song": "Clear Then Fails", "chart": "D14", "date": "2026-08-12", "broken": true}
+	]}`)
+	byTitle := map[string]*Song{}
+	for _, s := range tr.Songs {
+		byTitle[s.Title] = s
+	}
+
+	only := byTitle["Only Fails"]
+	h := only.Charts[0]
+	if h.Best != nil || h.Cleared || h.Clears != 0 || h.Fails != 2 || only.Cleared() || only.BestGrade() != "" {
+		t.Errorf("only fails: best %v cleared %v clears %d fails %d", h.Best, h.Cleared, h.Clears, h.Fails)
+	}
+
+	before := byTitle["Fails Then Clear"]
+	h = before.Charts[0]
+	clear := h.Plays[2]
+	if h.Best != clear || !h.Cleared || h.Clears != 1 || h.Fails != 2 || h.BestPlate != "RG" {
+		t.Errorf("fails then clear: best %v cleared %v clears %d fails %d", h.Best, h.Cleared, h.Clears, h.Fails)
+	}
+	if !clear.FirstClear || !clear.IsPB || clear.PrevBest != 0 || before.BestGrade() != "A" {
+		t.Errorf("first clear after fails = %+v, song best grade %s", clear, before.BestGrade())
+	}
+	for _, p := range h.Plays[:2] {
+		if p.IsPB || p.FirstClear {
+			t.Errorf("a fail counted as a PB or clear: %+v", p)
+		}
+	}
+
+	after := byTitle["Clear Then Fails"]
+	h = after.Charts[0]
+	if h.Best != h.Plays[0] || !h.Cleared || h.Clears != 1 || h.Fails != 3 || h.BestPlate != "FG" {
+		t.Errorf("clear then fails: best %v cleared %v clears %d fails %d", h.Best, h.Cleared, h.Clears, h.Fails)
+	}
+	for _, p := range h.Plays[1:] {
+		if p.IsPB || p.FirstClear {
+			t.Errorf("a fail after a clear counted as a PB or clear: %+v", p)
+		}
+	}
+	if after.BestGrade() != "A+" {
+		t.Errorf("clear then fails: song best grade %s, want the cleared A+", after.BestGrade())
+	}
+
+	s := tr.Stats(mustDate(t, "2026-09-28"))
+	if s.Plays != 9 || s.Fails != 7 || s.Charts != 3 {
+		t.Errorf("stats = %+v", s)
+	}
+	if s.HighestSingle != 13 || s.HighestDouble != 14 {
+		t.Errorf("highest cleared = S%d D%d, want S13 D14", s.HighestSingle, s.HighestDouble)
+	}
+	if want := []GradeCount{{"A+", 1}, {"A", 1}}; len(s.BestGrades) != 2 || s.BestGrades[0] != want[0] || s.BestGrades[1] != want[1] {
+		t.Errorf("best grades = %v, want %v (charts with only fails have none)", s.BestGrades, want)
+	}
+}
+
+// A song's best grade comes from its cleared charts, even when a chart that
+// was never cleared has a better stage-break grade.
+func TestBestGradeIgnoresBreaksOnceCleared(t *testing.T) {
+	tr := load(t, `{"schema_version": 1, "scores": [
+		{"song": "Big Daddy", "chart": "S11", "date": "2026-09-01", "score": 780000},
+		{"song": "Big Daddy", "chart": "D18", "date": "2026-09-02", "score": 830000, "broken": true}
+	]}`)
+	if g := tr.Songs[0].BestGrade(); g != "A" {
+		t.Errorf("BestGrade = %s, want A from the cleared S11", g)
 	}
 }
 

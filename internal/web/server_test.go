@@ -59,11 +59,11 @@ func TestPages(t *testing.T) {
 		status int
 		want   []string
 	}{
-		{"/", 200, []string{"PUMP IT UP", "Latest session", `href="/song/big-daddy"`, "Kasou Shinja 仮装信者", `data-modes="single"`, "Hardest clears"}},
+		{"/", 200, []string{"PUMP IT UP", "Latest session", `href="/song/big-daddy"`, "Kasou Shinja 仮装信者", `data-modes="single"`, "Hardest clears", "36 plays (7 failed)"}},
 		{"/song/big-daddy", 200, []string{"<h1 class=\"display\">Big Daddy</h1>", "938,204", "Talented Game", "graph-svg is-wide", "graph-svg is-narrow", "506", "31.1", "First clear"}},
 		{"/song/nemesis", 200, []string{"Stage break", "died at the drill section", `data-tab="s16"`}},
 		{"/song/destination", 200, []string{"CO-OP x2", "with Sam"}},
-		{"/activity", 200, []string{"Sessions", "8 days at the cabinet", "134.0 kcal"}},
+		{"/activity", 200, []string{"Sessions", "11 days at the cabinet", "148.2 kcal", "36 plays (7 failed)", `<span class="tag tag-fail">Failed</span>`}},
 		{"/song/nope", 404, []string{"Stage break"}},
 		{"/nope", 404, []string{"nothing at this address"}},
 	}
@@ -83,9 +83,95 @@ func TestPages(t *testing.T) {
 	}
 }
 
+// A fail with no result must never show its internal score of -1.
+func TestNoScoreIsNeverShown(t *testing.T) {
+	h := newTestServer(t, "/")
+	for _, path := range []string{"/", "/activity", "/song/duel", "/song/vook", "/song/wither-garden"} {
+		_, body := get(t, h, path)
+		for _, bad := range []string{"−1<", ">-1<", "−1 ", "<nil>"} {
+			if strings.Contains(body, bad) {
+				t.Errorf("%s: body contains %q", path, bad)
+			}
+		}
+	}
+}
+
+func TestSongWithOnlyFails(t *testing.T) {
+	h := newTestServer(t, "/")
+	resp, body := get(t, h, "/song/duel")
+	if resp.StatusCode != 200 {
+		t.Fatalf("status %d", resp.StatusCode)
+	}
+	for _, want := range []string{
+		`<span class="nc-badge">Not cleared</span><span class="nc-count">2 attempts</span>`,
+		"No result yet · not cleared", "Last tried Sun 27 Sep 2026", "not cleared yet · 2 fails",
+		`<li class="attempt is-broken is-failed">`, `<span class="tag tag-fail">Failed</span>`,
+		`title="No grade">–</span>`, `title="No plate">–</span>`, `title="No judgments">–</span>`,
+		"Failed, no score", "Not cleared yet", "lost it in the last run again",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("body does not contain %q", want)
+		}
+	}
+	for _, unwanted := range []string{"Each play", "Stage break", `class="pt-dot" cx=`} {
+		if strings.Contains(body, unwanted) {
+			t.Errorf("body contains %q", unwanted)
+		}
+	}
+	// Two fails, each drawn in both chart layouts.
+	if n := strings.Count(body, `class="pt is-failed"`); n != 4 {
+		t.Errorf("%d fail markers, want 4", n)
+	}
+	if !strings.Contains(body, "data-tip=\"Tue 8 Sep 2026\nFailed\"") {
+		t.Errorf("fail marker tooltip missing")
+	}
+
+	_, home := get(t, h, "/")
+	card := home[strings.Index(home, `<a class="card" href="/song/duel"`):]
+	card = card[:strings.Index(card, "</a>")]
+	for _, want := range []string{`data-grade="0"`, `<span class="card-grade card-nc">`, `<span class="nc-count">2 attempts</span>`, `title="S13 · not cleared, 2 attempts"`} {
+		if !strings.Contains(card, want) {
+			t.Errorf("songs list card does not contain %q:\n%s", want, card)
+		}
+	}
+}
+
+// A fail after a clear is a marker at the bottom of the chart, on its date,
+// after the scored plays.
+func TestFailMarkersAfterAClear(t *testing.T) {
+	h := newTestServer(t, "/")
+	_, body := get(t, h, "/song/vook")
+	panel := body[strings.Index(body, `id="s12"`):]
+	wide := panel[strings.Index(panel, `<svg class="graph-svg is-wide"`):]
+	wide = wide[:strings.Index(wide, "</svg>")]
+	fail := strings.Index(wide, `class="pt is-failed"`)
+	if fail < 0 || !strings.Contains(wide[fail:], `cy="262.0"`) {
+		t.Errorf("no fail marker on the bottom edge (y 262) of the wide chart:\n%s", wide)
+	}
+	if !strings.Contains(panel, "1 clear · 1 fail") || !strings.Contains(panel, "Personal best") {
+		t.Errorf("Vook S12 should still show its clear")
+	}
+}
+
 func TestChartsAreValidSVG(t *testing.T) {
 	h := newTestServer(t, "/")
-	_, body := get(t, h, "/song/conflict")
+	// Two charts (S15, D13) × three metrics × two layouts.
+	if n := countValidSVGs(t, h, "/song/conflict"); n != 12 {
+		t.Errorf("found %d chart SVGs, want 12", n)
+	}
+	// One chart with only fails, and no judgments to switch metric by.
+	if n := countValidSVGs(t, h, "/song/duel"); n != 2 {
+		t.Errorf("found %d chart SVGs, want 2", n)
+	}
+	// S10 and S12 × three metrics × two layouts; S12 ends with a fail.
+	if n := countValidSVGs(t, h, "/song/vook"); n != 12 {
+		t.Errorf("found %d chart SVGs, want 12", n)
+	}
+}
+
+func countValidSVGs(t *testing.T, h http.Handler, path string) int {
+	t.Helper()
+	_, body := get(t, h, path)
 	n := 0
 	for {
 		start := strings.Index(body, `<svg class="graph-svg`)
@@ -94,15 +180,12 @@ func TestChartsAreValidSVG(t *testing.T) {
 		}
 		end := strings.Index(body[start:], "</svg>") + start + len("</svg>")
 		if err := xml.Unmarshal([]byte(body[start:end]), new(struct{})); err != nil {
-			t.Fatalf("chart %d is not well-formed: %v", n, err)
+			t.Fatalf("%s: chart %d is not well-formed: %v", path, n, err)
 		}
 		body = body[end:]
 		n++
 	}
-	// Two charts (S15, D13) × three metrics × two layouts.
-	if n != 12 {
-		t.Errorf("found %d chart SVGs, want 12", n)
-	}
+	return n
 }
 
 func TestArt(t *testing.T) {
@@ -128,25 +211,39 @@ func TestAPIAndHealth(t *testing.T) {
 	}
 	_, body = get(t, h, "/api/data.json")
 	var data struct {
-		Stats struct{ Plays, Songs int }
+		Stats struct{ Plays, Fails, Songs int }
 		Art   art.Status
 		Songs []apiSong
 	}
 	if err := json.Unmarshal([]byte(body), &data); err != nil {
 		t.Fatal(err)
 	}
-	if data.Stats.Plays != 30 || data.Stats.Songs != 11 || data.Art.Resolved != 1 || data.Art.Missing != 10 {
+	if data.Stats.Plays != 36 || data.Stats.Fails != 7 || data.Stats.Songs != 15 || data.Art.Resolved != 1 || data.Art.Missing != 14 {
 		t.Errorf("api stats = %+v art = %+v", data.Stats, data.Art)
 	}
+	songs := map[string]apiSong{}
 	for _, s := range data.Songs {
-		if s.Slug == "big-daddy" {
-			if s.Art != "image" || len(s.Charts) != 1 || s.Charts[0].Best.Score != 938204 || s.Charts[0].Best.Plate != "TG" {
-				t.Errorf("big daddy = %+v", s)
-			}
-			return
-		}
+		songs[s.Slug] = s
 	}
-	t.Error("big-daddy missing from the API")
+	bd := songs["big-daddy"]
+	if bd.Art != "image" || len(bd.Charts) != 1 || bd.Charts[0].Best.Score != 938204 || bd.Charts[0].Best.Plate != "TG" || len(bd.Charts[0].History) != 3 {
+		t.Errorf("big daddy = %+v", bd)
+	}
+	duel := songs["duel"]
+	if len(duel.Charts) != 1 {
+		t.Fatalf("duel = %+v", duel)
+	}
+	c := duel.Charts[0]
+	if c.Best != nil || c.Cleared || c.Plays != 2 || c.Clears != 0 || c.Fails != 2 || len(c.History) != 2 {
+		t.Errorf("duel S13 = %+v", c)
+	}
+	// The raw JSON has explicit nulls for a fail with no result.
+	if !strings.Contains(body, `"date": "2026-09-08",
+              "score": null,
+              "grade": null,
+              "broken": true`) {
+		t.Errorf("no-score play is not in the API with score and grade null")
+	}
 }
 
 func TestBasePath(t *testing.T) {

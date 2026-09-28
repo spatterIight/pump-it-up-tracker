@@ -6,6 +6,10 @@
 
 {{define "plate-short"}}{{if .}}<span class="plate plate-{{plateClass .}} is-short" title="{{.Name}}">{{.}}</span>{{end}}{{end}}
 
-{{define "delta"}}{{if .Broken}}<span class="tag tag-break">Stage break</span>{{else if .FirstClear}}<span class="tag tag-first">First clear</span>{{else if .IsPB}}<span class="delta is-up" title="New personal best">{{signed .Delta}}</span>{{else}}<span class="delta" title="Compared with the personal best at the time">{{signed .Delta}}</span>{{end}}{{end}}
+{{define "delta"}}{{if not .HasScore}}<span class="tag tag-fail">Failed</span>{{else if .Broken}}<span class="tag tag-break">Stage break</span>{{else if .FirstClear}}<span class="tag tag-first">First clear</span>{{else if .IsPB}}<span class="delta is-up" title="New personal best">{{signed .Delta}}</span>{{else}}<span class="delta" title="Compared with the personal best at the time">{{signed .Delta}}</span>{{end}}{{end}}
 
 {{define "count"}}{{if lt . 10}}<span class="z" aria-hidden="true">00</span>{{else if lt . 100}}<span class="z" aria-hidden="true">0</span>{{end}}{{.}}{{end}}
+
+{{define "play-score"}}{{if .HasScore}}{{score .Score}}{{else}}<span title="No score">–</span>{{end}}{{end}}
+
+{{define "not-cleared"}}<span class="nc"><span class="nc-badge">Not cleared</span><span class="nc-count">{{plural . "attempt" "attempts"}}</span></span>{{end}}

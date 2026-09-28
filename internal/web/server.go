@@ -254,11 +254,25 @@ type apiBest struct {
 	Date  string `json:"date"`
 }
 
+// apiPlay is one play. Score and Grade are null for a fail with no result.
+type apiPlay struct {
+	Date   string  `json:"date"`
+	Score  *int    `json:"score"`
+	Grade  *string `json:"grade"`
+	Plate  string  `json:"plate,omitempty"`
+	Broken bool    `json:"broken"`
+	PB     bool    `json:"pb"`
+}
+
 type apiChart struct {
-	Chart   string  `json:"chart"`
-	Plays   int     `json:"plays"`
-	Cleared bool    `json:"cleared"`
-	Best    apiBest `json:"best"`
+	Chart   string `json:"chart"`
+	Plays   int    `json:"plays"`
+	Clears  int    `json:"clears"`
+	Fails   int    `json:"fails"`
+	Cleared bool   `json:"cleared"`
+	// Best is null when no play has a score.
+	Best    *apiBest  `json:"best"`
+	History []apiPlay `json:"history"`
 }
 
 type apiSong struct {
@@ -280,17 +294,34 @@ func (s *Server) data(w http.ResponseWriter, r *http.Request) {
 			as.Art = "image"
 		}
 		for _, h := range song.Charts {
-			as.Charts = append(as.Charts, apiChart{
+			ac := apiChart{
 				Chart:   h.Chart.String(),
 				Plays:   len(h.Plays),
+				Clears:  h.Clears,
+				Fails:   h.Fails,
 				Cleared: h.Cleared,
-				Best: apiBest{
+				History: make([]apiPlay, 0, len(h.Plays)),
+			}
+			if h.Best != nil {
+				ac.Best = &apiBest{
 					Score: h.Best.Score,
 					Grade: string(h.Best.Grade),
 					Plate: string(h.Best.Plate),
 					Date:  h.Best.Date.Format("2006-01-02"),
-				},
-			})
+				}
+			}
+			for _, p := range h.Plays {
+				ap := apiPlay{Date: p.Date.Format("2006-01-02"), Plate: string(p.Plate), Broken: p.Broken, PB: p.IsPB}
+				if p.HasTime {
+					ap.Date = p.Date.Format("2006-01-02T15:04")
+				}
+				if p.HasScore() {
+					score, grade := p.Score, string(p.Grade)
+					ap.Score, ap.Grade = &score, &grade
+				}
+				ac.History = append(ac.History, ap)
+			}
+			as.Charts = append(as.Charts, ac)
 		}
 		songs = append(songs, as)
 	}
@@ -299,6 +330,7 @@ func (s *Server) data(w http.ResponseWriter, r *http.Request) {
 		"version": s.opts.Version,
 		"stats": map[string]any{
 			"plays":          stats.Plays,
+			"fails":          stats.Fails,
 			"songs":          stats.Songs,
 			"charts":         stats.Charts,
 			"highest_single": stats.HighestSingle,

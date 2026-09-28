@@ -42,10 +42,15 @@ type ChartHistory struct {
 	// Plays in chronological order.
 	Plays []*Play
 	// Best is the highest-scoring cleared play, or the highest-scoring broken
-	// play when the chart has never been cleared.
+	// play when the chart has never been cleared. It is nil when no play has
+	// a score, i.e. every attempt failed with no result.
 	Best *Play
 	// Cleared reports whether any play was not stage-broken.
 	Cleared bool
+	// Clears counts the plays that were not stage-broken.
+	Clears int
+	// Fails counts the stage-broken plays, with or without a score.
+	Fails int
 	// BestPlate is the best plate across cleared plays, if any was recorded.
 	BestPlate Plate
 	// FewestMisses is the lowest Bad+Miss count among plays with judgments,
@@ -66,6 +71,8 @@ type Play struct {
 	Date    time.Time
 	HasTime bool
 
+	// Score is -1 for a fail with no result ("-" on the result screen); such
+	// a play is always Broken and has no grade, plate or judgments.
 	Score     int
 	Grade     Grade
 	Plate     Plate
@@ -87,6 +94,10 @@ type Play struct {
 
 	index int
 }
+
+// HasScore reports whether the play has a result. Only a stage break can
+// lack one.
+func (p *Play) HasScore() bool { return p.Score >= 0 }
 
 // Delta is the score difference to the previous personal best. It is only
 // meaningful for cleared plays that are not a chart's first clear.
@@ -115,12 +126,24 @@ func (s *Song) LastPlayed() time.Time {
 	return s.Plays[len(s.Plays)-1].Date
 }
 
+// Cleared reports whether any chart of the song has been cleared.
+func (s *Song) Cleared() bool {
+	for _, c := range s.Charts {
+		if c.Cleared {
+			return true
+		}
+	}
+	return false
+}
+
 // BestGrade returns the best grade among the song's cleared plays, or its
-// best broken grade if it has never been cleared.
+// best broken grade if it has never been cleared. It is empty when no play
+// has a score.
 func (s *Song) BestGrade() Grade {
 	var best Grade
+	cleared := s.Cleared()
 	for _, c := range s.Charts {
-		if c.Best != nil && c.Best.Grade.Rank() > best.Rank() {
+		if c.Best != nil && c.Cleared == cleared && c.Best.Grade.Rank() > best.Rank() {
 			best = c.Best.Grade
 		}
 	}
@@ -138,3 +161,6 @@ func (s *Song) TopChart() *ChartHistory {
 	}
 	return top
 }
+
+// LastPlayed returns the date of the most recent play of the chart.
+func (h *ChartHistory) LastPlayed() time.Time { return h.Plays[len(h.Plays)-1].Date }

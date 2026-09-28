@@ -240,8 +240,31 @@ func build(data fileData) (*Tracker, error) {
 			addf("%s: %v", where, err)
 		}
 
+		// A stage break with no score is a fail the result screen shows as
+		// "-": nothing about it was recorded beyond when it happened.
+		noScore := raw.Broken && raw.Score == nil && (raw.Judgments == nil || raw.MaxCombo == nil)
+		if noScore {
+			var extra []string
+			if raw.Grade != "" {
+				extra = append(extra, "grade")
+			}
+			if raw.Plate != "" {
+				extra = append(extra, "plate")
+			}
+			if raw.Judgments != nil {
+				extra = append(extra, "judgments")
+			}
+			if raw.MaxCombo != nil {
+				extra = append(extra, "max_combo")
+			}
+			if len(extra) > 0 {
+				addf("%s: a broken play without a score is a fail with no result, so it cannot have %s (only song, chart, date, kcal and note); "+
+					"if the result screen showed a score, add it, or both judgments and max_combo", where, strings.Join(extra, " or "))
+			}
+		}
+
 		var judgments *Judgments
-		if raw.Judgments != nil {
+		if raw.Judgments != nil && !noScore {
 			j := raw.Judgments
 			var missing []string
 			get := func(name string, v *flexInt) int {
@@ -269,7 +292,7 @@ func build(data fileData) (*Tracker, error) {
 		}
 
 		maxCombo := -1
-		if raw.MaxCombo != nil {
+		if raw.MaxCombo != nil && !noScore {
 			maxCombo = int(*raw.MaxCombo)
 			if maxCombo < 0 {
 				addf("%s: max_combo cannot be negative", where)
@@ -286,13 +309,14 @@ func build(data fileData) (*Tracker, error) {
 			}
 		}
 
-		if len(problems) == entryProblems {
+		if len(problems) == entryProblems && !noScore {
 			canReconcile := judgments != nil && maxCombo >= 0
 			switch {
 			case score < 0 && canReconcile:
 				score = ComputeScore(*judgments, maxCombo)
 			case score < 0:
-				addf("%s: score is required, unless judgments and max_combo are given to work it out from", where)
+				addf("%s: score is required, unless judgments and max_combo are given to work it out from "+
+					"(for a failed play with no score, add broken: true instead)", where)
 			case canReconcile && !raw.Broken:
 				// A broken stage stops counting notes part-way through, so its
 				// result screen does not add up the same way.
@@ -302,8 +326,11 @@ func build(data fileData) (*Tracker, error) {
 			}
 		}
 
-		grade := GradeForScore(max(score, 0))
-		if raw.Grade != "" {
+		var grade Grade
+		if score >= 0 {
+			grade = GradeForScore(score)
+		}
+		if raw.Grade != "" && !noScore {
 			g, ok := parseGrade(raw.Grade)
 			switch {
 			case !ok:
@@ -316,7 +343,7 @@ func build(data fileData) (*Tracker, error) {
 		}
 
 		var plate Plate
-		if raw.Plate != "" {
+		if raw.Plate != "" && !noScore {
 			p, ok := parsePlate(raw.Plate)
 			if !ok {
 				addf("%s: plate %q is not one of PG, UG, EG, SG, MG, TG, FG, RG (or their full names)", where, raw.Plate)
@@ -430,8 +457,10 @@ func (h *ChartHistory) derive() {
 			}
 		}
 		if p.Broken {
+			h.Fails++
 			continue
 		}
+		h.Clears++
 		p.PrevBest = best
 		if !h.Cleared {
 			p.FirstClear = true
@@ -450,7 +479,7 @@ func (h *ChartHistory) derive() {
 	}
 	if h.Best == nil {
 		for _, p := range h.Plays {
-			if h.Best == nil || p.Score > h.Best.Score {
+			if p.HasScore() && (h.Best == nil || p.Score > h.Best.Score) {
 				h.Best = p
 			}
 		}
