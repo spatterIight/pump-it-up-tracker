@@ -8,6 +8,7 @@ import (
 // Phoenix 2 scores plays the way Phoenix does, but grades them differently.
 func TestPhoenix2Grades(t *testing.T) {
 	tr := load(t, `{"schema_version": 1, "scores": [
+		{"song": "Conflict", "chart": "S15", "date": "2026-08-31", "version": "phoenix2", "score": 799000, "grade": "A"},
 		{"song": "Conflict", "chart": "S15", "date": "2026-09-01", "version": "phoenix2", "score": 910000, "plate": "FG"},
 		{"song": "Conflict", "chart": "S15", "date": "2026-09-01", "score": 910000},
 		{"song": "Nemesis", "chart": "S16", "date": "2026-09-02", "version": "Phoenix 2", "score": 939999},
@@ -18,6 +19,8 @@ func TestPhoenix2Grades(t *testing.T) {
 		 "judgments": {"perfect": 506, "great": 31, "good": 11, "bad": 7, "miss": 6}, "max_combo": 294}
 	]}`)
 	want := map[string]Grade{
+		// A is known to start at 800,000 only to within a few thousand points.
+		"2026-08-31 phoenix2": "A",
 		"2026-09-01 phoenix2": "A+", "2026-09-01 phoenix": "AA",
 		"2026-09-02 phoenix2": "AA", "2026-09-03 phoenix2": "A",
 		// Where B, C and D start is not known: a score under 800,000 is graded as logged.
@@ -42,11 +45,14 @@ func TestPhoenix2Grades(t *testing.T) {
 		{"song": "Conflict", "chart": "S15", "date": "2026-09-01", "version": "phoenix2", "score": 910000, "grade": "AA"},
 		{"song": "Conflict", "chart": "S15", "date": "2026-09-02", "version": "phoenix2", "score": 1000001},
 		{"song": "Conflict", "chart": "S15", "date": "2026-09-03", "version": "phoenix2", "score": 938000,
-		 "judgments": {"perfect": 506, "great": 31, "good": 11, "bad": 7, "miss": 6}, "max_combo": 294}
+		 "judgments": {"perfect": 506, "great": 31, "good": 11, "bad": 7, "miss": 6}, "max_combo": 294},
+		{"song": "Conflict", "chart": "S15", "date": "2026-09-04", "version": "phoenix2", "score": 600000, "grade": "SSS+"}
 	]}`,
 		"scores[0] (Conflict S15): grade AA does not match score 910000, which earns A+",
 		"scores[1] (Conflict S15): score 1000001 is outside 0 to 1000000",
-		"scores[2] (Conflict S15): score 938000 does not match the judgments and max combo, which give 938204")
+		"scores[2] (Conflict S15): score 938000 does not match the judgments and max combo, which give 938204",
+		// A score under every cutoff is graded as logged, but cannot be better than A.
+		"scores[3] (Conflict S15): grade SSS+ does not match score 600000: in Phoenix 2, a score under 800000 earns A at best; check for a typo")
 }
 
 // A Phoenix chart linked to Phoenix 2 carries its personal bests over, since

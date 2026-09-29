@@ -647,7 +647,18 @@ func build(data fileData, vs versionSet, o Options) (*Tracker, error) {
 			switch {
 			case !ok:
 				addf("%s: grade %q is not a %s grade (%s)", where, raw.Grade, version.Name, gradeList(sys.Grades()))
-			case raw.Broken || !gradeWorkedOut:
+			case raw.Broken:
+				grade = g
+			case !gradeWorkedOut:
+				// A score under every grade that follows from the score is
+				// graded as logged, but cannot earn more than the lowest of
+				// them: a Phoenix 2 score under 800,000 is an A at best.
+				if ts := sys.GradeThresholds(); len(ts) > 0 && score >= 0 {
+					if lowest := ts[len(ts)-1]; score < lowest.Min && GradeRank(sys, g) > GradeRank(sys, lowest.Grade) {
+						addf("%s: grade %s does not match score %d: in %s, a score under %d earns %s at best; check for a typo",
+							where, g, score, version.Name, lowest.Min, lowest.Grade)
+					}
+				}
 				grade = g
 			case score >= 0 && g != grade:
 				if sys.GradeThresholds() != nil {

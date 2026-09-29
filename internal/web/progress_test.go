@@ -172,6 +172,42 @@ func TestPhoenix2Progress(t *testing.T) {
 	wantAll(t, "Big Daddy", body, `S11 (Phoenix) → S11 (Phoenix 2)`)
 }
 
+// A chart is cleared in a version when it was cleared there, as PUMBILITY
+// counts it: a Phoenix clear does not clear the same chart in Phoenix 2.
+func TestFoldersCountTheVersionsOwnClears(t *testing.T) {
+	tr, err := tracker.LoadWith(strings.NewReader(`{"schema_version": 1, "scores": [
+		{"song": "Conflict", "chart": "S15", "date": "2026-09-01", "score": 910000},
+		{"song": "Conflict", "chart": "S15", "date": "2026-09-29", "version": "phoenix2", "broken": true}
+	]}`), tracker.Options{ChartID: charts().ChartID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := serve(t, tr, "/")
+	_, body := get(t, h, "/progress/s15")
+	wantAll(t, "Conflict in Phoenix 2's S15", folderRowOf(body, "Conflict"),
+		` is-tried" data-cleared="false">`,
+		// 210 × 1.36: a single 15 is priced as a double 16, and a single's AA is 1.36.
+		`What a clear at AA would add to your PUMBILITY">+285.6</span>`)
+	wantNone(t, "Phoenix 2 S15", body, "is-cleared")
+	_, body = get(t, h, "/progress")
+	wantAll(t, "Phoenix 2 progress", body, `title="Single 15: 0 of `)
+	wantNone(t, "Phoenix 2 progress", body, "Your hardest level cleared")
+
+	_, body = get(t, h, "/progress/s15?version=phoenix")
+	wantAll(t, "Conflict in Phoenix's S15", folderRowOf(body, "Conflict"),
+		` is-cleared" data-cleared="true">`, `<span class="frow-score">910,000</span>`)
+}
+
+// folderRowOf returns a song's row of a level folder page, "" when it has none.
+func folderRowOf(body, song string) string {
+	for _, row := range strings.Split(body, `<li class="frow`)[1:] {
+		if strings.Contains(row, `<span class="frow-song">`+song+`</span>`) {
+			return row
+		}
+	}
+	return ""
+}
+
 func TestJackets(t *testing.T) {
 	tr, err := tracker.Load(strings.NewReader(`{"schema_version": 1, "scores": [
 		{"song": "Big Daddy", "chart": "S11", "date": "2026-09-28", "score": 938204}

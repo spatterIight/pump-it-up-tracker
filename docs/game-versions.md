@@ -32,7 +32,7 @@ The version can also be written with capitals or spaces (`Phoenix 2`, `Prime 2`)
 | Phoenix | 750,000 | 825,000 | 900,000 | 925,000 | the same in both |
 | Phoenix 2 | 800,000 | 900,000 | 920,000 | 940,000 | |
 
-A Phoenix 2 play is checked as a Phoenix play is, and its grade is worked out from its score with these cutoffs. They are [PIU Scores](https://piuscores.arroweclip.se)' reading of the official leaderboards. Nothing there shows where B, C and D start, so a score under 800,000 is graded as logged: `grade` is optional, and a play without one shows no grade.
+A Phoenix 2 play is checked as a Phoenix play is, and its grade is worked out from its score with these cutoffs. They are [PIU Scores](https://piuscores.arroweclip.se)' reading of the official leaderboards. Nothing there shows where B, C and D start, so a score under 800,000 is graded as logged: `grade` is optional, and a play without one shows no grade. A logged grade can't be better than A there: an A+ or better on such a score is refused as a typo.
 
 **Prime 2 and XX** plays take `score`, `grade`, `judgments`, `max_combo`, `kcal`, `note` and `broken` just as Phoenix plays do, with these differences:
 

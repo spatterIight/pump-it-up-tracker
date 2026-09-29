@@ -90,6 +90,10 @@ type folderRow struct {
 	// History is the chart's plays in the version, nil when it was never
 	// played.
 	History *tracker.ChartHistory
+	// Best is the chart's highest-scoring clear in the version, nil when it
+	// was not cleared there. As in PUMBILITY, a clear of the chart in an
+	// earlier version does not count, though the song page carries it over.
+	Best    *tracker.Play
 	Cleared bool
 	// Gain is what clearing the chart at AA would add to PUMBILITY.
 	Gain float64
@@ -221,7 +225,8 @@ func (s *Server) folders(v *tracker.Version, mix *catalog.Mix, rating *tracker.P
 		row := folderRow{Entry: e, Title: e.Song, Artist: e.Artist, History: played[e]}
 		if row.History != nil {
 			row.Title = row.History.Song.Title
-			row.Cleared = row.History.Record.Cleared
+			row.Best = bestClear(row.History)
+			row.Cleared = row.Best != nil
 		}
 		if !row.Cleared && rating != nil {
 			row.Gain = rating.Gain(clearValue(v, e.Chart))
@@ -238,10 +243,23 @@ func (s *Server) folders(v *tracker.Version, mix *catalog.Mix, rating *tracker.P
 		out[key] = rows
 	}
 	for _, h := range unlisted {
-		row := folderRow{Title: h.Song.Title, Artist: s.songArtist(h.Song), History: h, Cleared: h.Record.Cleared}
+		row := folderRow{Title: h.Song.Title, Artist: s.songArtist(h.Song), History: h, Best: bestClear(h)}
+		row.Cleared = row.Best != nil
 		out[h.Chart] = append(out[h.Chart], row)
 	}
 	return out
+}
+
+// bestClear is the highest-scoring clear of the chart in its own version, the
+// first of those that tie, or nil when it was not cleared there.
+func bestClear(h *tracker.ChartHistory) *tracker.Play {
+	var best *tracker.Play
+	for _, p := range h.Plays {
+		if !p.Broken && (best == nil || p.Score > best.Score) {
+			best = p
+		}
+	}
+	return best
 }
 
 // clearValue is what a chart cleared at AA with no plate is worth towards

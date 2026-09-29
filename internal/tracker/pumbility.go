@@ -223,7 +223,7 @@ func (t *Tracker) Pumbility(v *Version) *Pumbility {
 	}
 	out.Total = cents(out.Total)
 	for _, rc := range out.Charts {
-		rc.Next, rc.NextMin = nextGrade(v.Scoring, rc.Grade, rc.Estimated)
+		rc.Next, rc.NextMin = nextGrade(v.Scoring, rc.Grade)
 		if rc.Next == "" {
 			continue
 		}
@@ -264,21 +264,24 @@ func estimatedGrade(v *Version, score int) Grade {
 }
 
 // nextGrade returns the grade above g that the score alone earns, and the
-// lowest score that earns it, or "" when there is none. An estimated grade
-// is below every grade the score is known to earn.
-func nextGrade(sys ScoringSystem, g Grade, estimated bool) (Grade, int) {
+// lowest score that earns it, or "" when there is none. For a grade below
+// every one the score alone earns, logged or estimated (a Phoenix 2 B), that
+// is the lowest of them.
+func nextGrade(sys ScoringSystem, g Grade) (Grade, int) {
 	ts := sys.GradeThresholds()
 	if len(ts) == 0 {
 		return "", 0
 	}
-	if estimated {
-		last := ts[len(ts)-1]
-		return last.Grade, last.Min
-	}
 	for i, t := range ts {
-		if t.Grade == g && i > 0 {
+		if t.Grade == g {
+			if i == 0 {
+				return "", 0
+			}
 			return ts[i-1].Grade, ts[i-1].Min
 		}
+	}
+	if last := ts[len(ts)-1]; GradeRank(sys, g) > 0 && GradeRank(sys, g) < GradeRank(sys, last.Grade) {
+		return last.Grade, last.Min
 	}
 	return "", 0
 }

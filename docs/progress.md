@@ -56,7 +56,7 @@ Each folder has a page of its own, `/progress/s17` for Single 17. It lists every
 
 **Clear next** on the Progress page picks up to four charts from two folders: your hardest level cleared, and the one above it. They are the easiest charts there you haven't cleared. With each is what a clear at AA would add to your PUMBILITY.
 
-Cleared means the same here as on the song page: a clear of a linked chart in an earlier version with the same scoring carries over (see [Chart continuity](game-versions.md#chart-continuity)).
+Cleared means cleared in the version shown, as PUMBILITY counts it. A clear of the same chart in an earlier version doesn't count here, although the song page carries its personal best over (see [Chart continuity](game-versions.md#chart-continuity)). A folder chart you've cleared shows your best clear in the version.
 
 ## The chart list
 

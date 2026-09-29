@@ -134,4 +134,10 @@ func TestPhoenix2Pumbility(t *testing.T) {
 	if rc.Best.Grade != "" || rc.Grade != "B" || !rc.Estimated || rc.Next != "A" || rc.NextMin != 800000 || rc.Gain != 9 {
 		t.Errorf("an ungraded play = %+v", rc)
 	}
+	// So is the next one up from a grade logged under every cutoff.
+	tr = load(t, `{"schema_version": 1, "scores": [{"song": "Vook", "chart": "D10", "date": "2026-10-01", "version": "phoenix2", "score": 750000, "grade": "B"}]}`)
+	rc = tr.Pumbility(tr.Current).Charts[0]
+	if rc.Grade != "B" || rc.Estimated || rc.Next != "A" || rc.NextMin != 800000 || rc.Gain != 9 {
+		t.Errorf("a play logged as B = %+v", rc)
+	}
 }

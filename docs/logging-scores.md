@@ -42,7 +42,7 @@ Every entry is checked before it is shown. A deploy with a mistake in it fails a
 - **Score against judgments.** When the judgments and max combo are both given, the score must match what the game would award for them:
 
   `1,000,000 × (0.995 × (Perfect + 0.6·Great + 0.2·Good + 0.1·Bad) + 0.005 × MaxCombo) / Notes`
-- **Grade against score.** A `grade`, if given, must match the Phoenix grade table. Grades are worked out from the score otherwise.
+- **Grade against score.** A `grade`, if given, must match the Phoenix grade table. Grades are worked out from the score otherwise. Phoenix 2's table stops at A, so a Phoenix 2 score under 800,000 is graded as logged, but can't be logged as better than an A.
 - **Failed plays.** A `broken: true` play with no score cannot have a `grade`, `plate`, `judgments` or `max_combo`. Without `broken: true`, a play with no score is rejected.
 - **Everything else:** chart notation, dates, plate names, and unknown keys (such as `perfects:`) are rejected with an explanation.
 - **Judgments against the chart's notes.** For a chart of Phoenix or Phoenix 2, the judgments of a play that wasn't a stage break must add up to the chart's note count in the chart list built into the app (see [Progress](progress.md#the-chart-list)). This one is only a warning, since the list can be wrong too. `validate` prints the warnings after checking a file, the app logs them when it starts, and the song page points out the play. Counts that look like placeholders in the list, such as round hundreds, are not checked.
