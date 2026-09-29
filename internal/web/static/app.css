@@ -1250,11 +1250,11 @@ span.ball.m-coop { font-size: 12px; }
 .next-head-text small { font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--cyan); }
 .next-more { margin-left: auto; font-size: 18px; color: var(--cyan); }
 .next-done { margin: 0 6px; }
-.next-group .frow-inner { grid-template-columns: 76px minmax(0, 1fr) auto; grid-template-areas: "thumb title gain" "thumb diff status"; gap: 4px 12px; padding: 6px 16px 6px 14px; }
+.next-group .frow-inner { grid-template-columns: 76px minmax(0, 1fr) auto; grid-template-areas: "thumb title gain" "thumb meta meta"; gap: 4px 12px; padding: 6px 16px 6px 14px; }
 .next-group .frow-thumb { grid-area: thumb; width: 76px; }
 .next-group .frow-title { grid-area: title; }
-.next-group .frow-diff { grid-area: diff; }
-.next-group .frow-status { grid-area: status; }
+.next-group .frow-meta { grid-area: meta; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-width: 0; }
+.next-group .frow-status { margin-left: auto; }
 .next-group .frow-gain { grid-area: gain; }
 
 .folder-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
@@ -1313,6 +1313,10 @@ a.frow-inner { color: inherit; }
 .frow-thumb:empty { aspect-ratio: 700 / 393; background: linear-gradient(135deg, rgba(39, 212, 255, 0.35), rgba(20, 60, 140, 0.4)); }
 .frow-thumb::after { inset: 1.5px; box-shadow: inset 0 0 8px rgba(39, 212, 255, 0.45); }
 .frow-title { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+/* The difficulty and status are columns of their own on a wide row. On a
+   narrow one they share a line, and the status drops below the difficulty
+   when both do not fit. */
+.frow-meta { display: contents; }
 .frow-song { font-weight: 700; font-style: italic; font-size: 15.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .frow-sub { font-size: 12px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .frow-status { display: flex; align-items: center; justify-content: flex-end; gap: 10px; min-width: 0; }
@@ -1382,11 +1386,11 @@ a.frow-inner { color: inherit; }
 
 @media (max-width: 960px) {
   .next-grid { grid-template-columns: 1fr; }
-  .frow-inner { grid-template-columns: 76px minmax(0, 1fr) auto; grid-template-areas: "thumb title gain" "thumb diff status"; gap: 4px 12px; }
+  .frow-inner { grid-template-columns: 76px minmax(0, 1fr) auto; grid-template-areas: "thumb title gain" "thumb meta meta"; gap: 4px 12px; }
   .frow-thumb { grid-area: thumb; width: 76px; }
   .frow-title { grid-area: title; }
-  .frow-diff { grid-area: diff; }
-  .frow-status { grid-area: status; }
+  .frow-meta { grid-area: meta; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-width: 0; }
+  .frow-status { margin-left: auto; }
   .frow-gain { grid-area: gain; }
   .rated-inner { grid-template-columns: 28px 76px minmax(0, 1fr) auto; grid-template-areas: "rank thumb title value" "rank thumb grade next"; gap: 4px 12px; }
   .rated-rank { grid-area: rank; }
