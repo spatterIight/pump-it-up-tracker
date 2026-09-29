@@ -22,7 +22,7 @@ type Version struct {
 }
 
 // versions lists the game versions this build reads, in release order. See
-// README.md, "Adding a game version".
+// docs/development.md, "Adding a game version".
 var versions = []Version{
 	{ID: "prime2", Name: "Prime 2", Scoring: Prime2Scoring},
 	{ID: "xx", Name: "XX", Scoring: XXScoring},

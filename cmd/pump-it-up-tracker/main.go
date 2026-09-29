@@ -8,7 +8,7 @@
 //	pump-it-up-tracker healthcheck       probe a running server (for container healthchecks)
 //	pump-it-up-tracker version           print the version
 //
-// Configuration is read from the environment; see README.md.
+// Configuration is read from the environment; see docs/configuration.md.
 package main
 
 import (

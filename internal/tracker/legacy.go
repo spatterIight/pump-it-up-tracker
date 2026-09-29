@@ -7,7 +7,7 @@ import "fmt"
 // result screen, since it depends on where the combo broke and on which
 // misses were on holds, and the documented grade table does not reproduce
 // real result screens. So scores and grades are taken as logged, and only
-// the rounding is checked. See README.md, "Game versions".
+// the rounding is checked. See docs/game-versions.md.
 
 // Prime2Scoring scores and grades plays the way Pump It Up Prime 2 does.
 // Its best grade is SS; its S is shown in gold or silver.
