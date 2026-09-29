@@ -139,25 +139,49 @@ func typeError(b []byte, t reflect.Type) error {
 	return &json.UnmarshalTypeError{Value: value, Type: t}
 }
 
+// Options configure how score data is read.
+type Options struct {
+	// Versions are the game versions to read, in release order; nil reads
+	// the ones this build reads. Tests use it to stand in for a future
+	// version.
+	Versions []Version
+	// ChartID identifies the step chart that a chart of a song is in a
+	// version, "" when it is not known. Charts of a song with the same ID in
+	// different versions are the same steps, and are linked as if a lineage
+	// in the song's metadata said so, unless one of them is in a lineage
+	// already. Nil links only the charts that lineages link.
+	ChartID func(song string, v *Version, c Chart) string
+}
+
 // LoadFile reads and validates a data file.
-func LoadFile(path string) (*Tracker, error) {
+func LoadFile(path string) (*Tracker, error) { return LoadFileWith(path, Options{}) }
+
+// LoadFileWith reads and validates a data file with the given options.
+func LoadFileWith(path string, o Options) (*Tracker, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
-	return Load(f)
+	return LoadWith(f, o)
 }
 
 // Load reads and validates score data. A *ValidationError lists every problem
 // found, so that they can all be fixed in one go.
-func Load(r io.Reader) (*Tracker, error) { return LoadVersions(r, versions) }
+func Load(r io.Reader) (*Tracker, error) { return LoadWith(r, Options{}) }
 
 // LoadVersions is Load for the given game versions, in release order, rather
-// than the ones this build reads. Tests use it to stand in for a future
-// version.
+// than the ones this build reads.
 func LoadVersions(r io.Reader, vs []Version) (*Tracker, error) {
-	set, err := newVersionSet(vs)
+	return LoadWith(r, Options{Versions: vs})
+}
+
+// LoadWith is Load with the given options.
+func LoadWith(r io.Reader, o Options) (*Tracker, error) {
+	if o.Versions == nil {
+		o.Versions = versions
+	}
+	set, err := newVersionSet(o.Versions)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +205,7 @@ func LoadVersions(r io.Reader, vs []Version) (*Tracker, error) {
 	if problems := decodeObject(doc, &data, ""); len(problems) > 0 {
 		return nil, &ValidationError{Problems: problems}
 	}
-	return build(data, set)
+	return build(data, set, o)
 }
 
 // decodeObject decodes the JSON object b into the struct v points to, one key
@@ -398,7 +422,7 @@ type lineage struct {
 	charts []chartID
 }
 
-func build(data fileData, vs versionSet) (*Tracker, error) {
+func build(data fileData, vs versionSet, o Options) (*Tracker, error) {
 	var problems []string
 	addf := func(format string, args ...any) { problems = append(problems, fmt.Sprintf(format, args...)) }
 
@@ -623,7 +647,18 @@ func build(data fileData, vs versionSet) (*Tracker, error) {
 			switch {
 			case !ok:
 				addf("%s: grade %q is not a %s grade (%s)", where, raw.Grade, version.Name, gradeList(sys.Grades()))
-			case raw.Broken || !gradeWorkedOut:
+			case raw.Broken:
+				grade = g
+			case !gradeWorkedOut:
+				// A score under every grade that follows from the score is
+				// graded as logged, but cannot earn more than the lowest of
+				// them: a Phoenix 2 score under 800,000 is an A at best.
+				if ts := sys.GradeThresholds(); len(ts) > 0 && score >= 0 {
+					if lowest := ts[len(ts)-1]; score < lowest.Min && GradeRank(sys, g) > GradeRank(sys, lowest.Grade) {
+						addf("%s: grade %s does not match score %d: in %s, a score under %d earns %s at best; check for a typo",
+							where, g, score, version.Name, lowest.Min, lowest.Grade)
+					}
+				}
 				grade = g
 			case score >= 0 && g != grade:
 				if sys.GradeThresholds() != nil {
@@ -691,9 +726,13 @@ func build(data fileData, vs versionSet) (*Tracker, error) {
 		t.Plays = append(t.Plays, play)
 	}
 
-	problems = append(problems, resolveLineages(lineages, logged, histories)...)
+	linked, lineageProblems := resolveLineages(lineages, logged, histories)
+	problems = append(problems, lineageProblems...)
 	if len(problems) > 0 {
 		return nil, &ValidationError{Problems: problems}
+	}
+	if o.ChartID != nil {
+		linkSameCharts(histories, linked, songs, o.ChartID)
 	}
 
 	chronological(t.Plays)
@@ -818,9 +857,9 @@ func parseLineage(decl map[string]flexString, song string, index int, where stri
 }
 
 // resolveLineages links the charts of each lineage, and reports lineages
-// with a chart that was never played, or that is in another lineage too.
-func resolveLineages(ls []lineage, logged map[chartID]bool, histories map[chartID]*ChartHistory) []string {
-	var problems []string
+// with a chart that was never played, or that is in another lineage too. It
+// returns the charts it linked.
+func resolveLineages(ls []lineage, logged map[chartID]bool, histories map[chartID]*ChartHistory) (linked map[chartID]bool, problems []string) {
 	in := map[chartID]int{} // the lineage each chart is in, by index
 	for _, l := range ls {
 		valid := true
@@ -848,11 +887,60 @@ func resolveLineages(ls []lineage, logged map[chartID]bool, histories map[chartI
 			}
 		}
 	}
-	return problems
+	linked = map[chartID]bool{}
+	for c := range in {
+		linked[c] = true
+	}
+	return linked, problems
+}
+
+// linkSameCharts links each chart that idOf identifies to the chart of the
+// same song with the same ID in the newest earlier version it was played in,
+// unless that one is already continued. A chart a lineage links to an
+// earlier one keeps that link, but can still be continued.
+func linkSameCharts(histories map[chartID]*ChartHistory, linked map[chartID]bool, songs map[string]*Song, idOf func(string, *Version, Chart) string) {
+	continued := map[*ChartHistory]bool{}
+	ids := make([]chartID, 0, len(histories))
+	for c, h := range histories {
+		ids = append(ids, c)
+		if h.Continues != nil {
+			continued[h.Continues] = true
+		}
+	}
+	// Oldest version first, so that each chart finds the newest earlier one.
+	slices.SortFunc(ids, func(a, b chartID) int {
+		switch {
+		case a.version != b.version:
+			return a.version.order - b.version.order
+		case a.song != b.song:
+			return strings.Compare(a.song, b.song)
+		case a.chart.Less(b.chart):
+			return -1
+		case b.chart.Less(a.chart):
+			return 1
+		}
+		return 0
+	})
+	type key struct{ song, id string }
+	// newest holds the chart with each ID in the newest version so far.
+	newest := map[key]*ChartHistory{}
+	for _, c := range ids {
+		id := idOf(songs[c.song].Title, c.version, c.chart)
+		if id == "" {
+			continue
+		}
+		k := key{c.song, id}
+		h := histories[c]
+		if prev := newest[k]; prev != nil && prev.Version != h.Version && !linked[c] && !continued[prev] {
+			h.Continues = prev
+			continued[prev] = true
+		}
+		newest[k] = h
+	}
 }
 
 // buildLineages follows the song's chart links into lineages, split into
-// records where the scoring system changes, and works out personal bests.
+// records where the score scale changes, and works out personal bests.
 func buildLineages(s *Song) []*Lineage {
 	continued := map[*ChartHistory]bool{}
 	for _, h := range s.Charts {
@@ -873,10 +961,12 @@ func buildLineages(s *Song) []*Lineage {
 		var r *Record
 		for _, h := range l.Charts {
 			h.Lineage = l
-			if r == nil || r.Scoring != h.Version.Scoring {
-				r = &Record{Lineage: l, Scoring: h.Version.Scoring}
+			if r == nil || r.Scoring.Scale() != h.Version.Scoring.Scale() {
+				r = &Record{Lineage: l}
 				l.Records = append(l.Records, r)
 			}
+			// The charts are oldest first, so this leaves the newest one's.
+			r.Scoring = h.Version.Scoring
 			h.Record = r
 			r.Charts = append(r.Charts, h)
 			r.Plays = append(r.Plays, h.Plays...)

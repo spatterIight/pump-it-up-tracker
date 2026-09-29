@@ -17,5 +17,8 @@ is that their fully transparent margins were trimmed.
   plates/<plate>.png            plates, RG to PG
   difficulty/Phoenix/<chart>.png
                                 Phoenix level balls: singles, doubles and co-op
+  difficulty/Phoenix2/<chart>.png
+                                Phoenix 2 level balls: singles, doubles and
+                                co-op (downloaded on 2026-09-29)
   difficulty/<chart>.png        level balls of XX and older mixes, and the
                                 performance (SP, DP) balls of every mix

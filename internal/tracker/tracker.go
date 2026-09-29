@@ -62,7 +62,7 @@ type ChartHistory struct {
 	// Lineage is the chart lineage the chart is part of.
 	Lineage *Lineage
 	// Record holds the personal bests the chart shares with the charts it is
-	// linked to in versions with the same scoring system.
+	// linked to in versions whose scores are on the same scale.
 	Record *Record
 	// Clears counts the chart's plays that were not stage-broken.
 	Clears int
@@ -77,7 +77,7 @@ type Lineage struct {
 	Song *Song
 	// Charts, one per version, oldest version first.
 	Charts []*ChartHistory
-	// Records split the lineage where the scoring system changes, oldest
+	// Records split the lineage where the score scale changes, oldest
 	// first. Scores are only compared within a record.
 	Records []*Record
 	// Plays in chronological order.
@@ -95,10 +95,14 @@ type Lineage struct {
 	BestPerfectRate float64
 }
 
-// Record is the personal bests of a chart lineage under one scoring system:
-// the charts of consecutive versions in it that score plays the same way.
+// Record is the personal bests of a chart lineage on one score scale: the
+// charts of consecutive versions in it that score plays the same way, even
+// if they grade them differently.
 type Record struct {
 	Lineage *Lineage
+	// Scoring is the scoring system of the record's newest chart, whose
+	// grades and grade lines the record is shown with. Each play keeps the
+	// grade of its own version.
 	Scoring ScoringSystem
 	// Charts, oldest version first.
 	Charts []*ChartHistory

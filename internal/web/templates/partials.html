@@ -26,3 +26,23 @@
   <a class="chip" href="{{filterURL .Nav nil}}"{{if not .Filter}} aria-current="true"{{end}}>All versions</a>
   {{range .Played}}<a class="chip" href="{{filterURL $.Nav .}}"{{if eq $.Filter .}} aria-current="true"{{end}}>{{.Name}}</a>{{end}}
 </nav>{{end}}{{end}}
+
+{{/* progress-filter switches a progress page between versions: .Versions, .Version and the page's key. */}}
+{{define "progress-filter"}}{{if gt (len .Versions) 1}}<nav class="chips version-filter" aria-label="Game version">
+  {{$page := .Page}}{{$v := .Version}}{{range .Versions}}<a class="chip" href="{{progressURL $page .}}"{{if eq $v .}} aria-current="true"{{end}}>{{.Name}}</a>{{end}}
+</nav>{{end}}{{end}}
+
+{{/* folder-row is one chart of a level folder: a link to it once played. */}}
+{{define "folder-row"}}<li class="frow{{if .Cleared}} is-cleared{{else if .History}} is-tried{{end}}" data-cleared="{{.Cleared}}">
+  {{if .History}}<a class="frow-inner" href="{{songURL .History.Song.Slug}}#{{.History.Lineage.Key}}">{{template "frow-body" .}}</a>
+  {{else}}<div class="frow-inner">{{template "frow-body" .}}</div>{{end}}
+</li>{{end}}
+
+{{define "frow-body"}}<span class="frame frow-thumb">{{if .History}}<img src="{{artURL .History.Song.Slug}}" alt="" loading="lazy" width="700" height="393">{{else}}{{with jacketURL .Title}}<img src="{{.}}" alt="" loading="lazy" width="700" height="393">{{end}}{{end}}</span>
+  <span class="frow-title">
+    <span class="frow-song">{{.Title}}</span>
+    <span class="frow-sub">{{with .Artist}}{{.}}{{end}}{{with .Entry}}{{if .StepArtist}}{{if $.Artist}} · {{end}}steps by {{.StepArtist}}{{end}}{{end}}</span>
+  </span>
+  <span class="frow-diff">{{with .Entry}}{{with .ClearDifficulty}}<span class="diff diff-{{.Class}}" title="How hard players on PIU Scores find it to clear for its level">{{.}}</span>{{end}}{{else}}<span class="diff diff-unknown" title="PIU Scores' chart list does not have this chart">Not in the list</span>{{end}}</span>
+  <span class="frow-status">{{if .Cleared}}{{with .Best}}{{template "play-grade" .}}<span class="frow-score">{{score .Score}}</span>{{end}}{{else if .History}}{{template "not-cleared" .Attempts}}{{else}}<span class="frow-new">Not played</span>{{end}}</span>
+  <span class="frow-gain">{{if .Gain}}<span title="What a clear at AA would add to your PUMBILITY">+{{rating .Gain}}</span>{{end}}</span>{{end}}

@@ -1,0 +1,40 @@
+{{define "content"}}
+{{with .Rating}}
+<section class="page-head">
+  <a class="back" href="{{progressURL "" .Version}}"><span aria-hidden="true">←</span> Progress</a>
+  <p class="eyebrow">PUMBILITY · {{.Version.Name}}</p>
+  <h1 class="display">{{rating .Rating.Total}}</h1>
+  <p class="lede">{{len .Rating.Pool}} of 50 charts counted{{if gt .Recent 0.0}} · <b class="up">{{signedRating .Recent}}</b> in the last 30 days{{end}}{{if .Rating.Full}} · a new clear has to beat {{rating .Rating.Cut}} to count{{end}}</p>
+  {{template "progress-filter" (progressFilter "pumbility" .Version .Versions)}}
+</section>
+
+{{if .Rating.History}}
+<section class="rating-card">
+  <div class="graph is-active rating-graph">{{ratingChart .Rating}}</div>
+</section>
+{{end}}
+
+<section class="section">
+  {{if .Rating.Charts}}
+  <ol class="rated-list">
+    {{range .Rating.Charts}}
+    {{if and (not .InPool) (eq .Rank 51)}}<li class="rated-cut" aria-hidden="true"><span>Not counted: below {{rating $.Rating.Rating.Cut}}</span></li>{{end}}
+    <li class="rated{{if not .InPool}} is-out{{end}}">
+      <a class="rated-inner" href="{{songURL .History.Song.Slug}}#{{.History.Lineage.Key}}">
+        <span class="rated-rank">{{.Rank}}</span>
+        <span class="frame rated-thumb"><img src="{{artURL .History.Song.Slug}}" alt="" loading="lazy" width="700" height="393"></span>
+        <span class="rated-title"><span class="rated-song">{{.History.Song.Title}}</span><span class="rated-sub">{{score .Best.Score}} · {{date .Best.Date}}</span></span>
+        {{template "ball" .History}}
+        <span class="rated-grade">{{template "grade" .Grade}}{{if .Estimated}}<small title="Phoenix 2 doesn't publish where grades below A start, so this one is PIU Scores' estimate">est.</small>{{end}}{{if eq $.Rating.Version.ID "phoenix2"}}{{template "plate-short" .Best.Plate}}{{end}}</span>
+        <span class="rated-value">{{rating .Value}}</span>
+        <span class="rated-next">{{if .Next}}{{if .Gain}}<span title="What {{.Next}} ({{score .NextMin}}) would add">{{.Next}} <b>+{{rating .Gain}}</b></span>{{else}}<span class="muted" title="{{.Next}} ({{score .NextMin}}) would not get it into the 50">{{.Next}} +0</span>{{end}}{{end}}</span>
+      </a>
+    </li>
+    {{end}}
+  </ol>
+  {{else}}
+  <p class="muted">No clears of level 10 or higher yet.</p>
+  {{end}}
+</section>
+{{end}}
+{{end}}

@@ -7,7 +7,8 @@
     <div class="song-hero-text">
       <a class="back" href="{{url "/"}}"><span aria-hidden="true">←</span> All songs</a>
       <h1 class="display">{{.Title}}</h1>
-      {{if or .Artist .BPM}}<p class="song-sub">{{.Artist}}{{if and .Artist .BPM}} · {{end}}{{if .BPM}}{{.BPM}} BPM{{end}}</p>{{end}}
+      {{$artist := songArtist .}}{{$bpm := songBPM .}}
+      {{if or $artist $bpm}}<p class="song-sub">{{$artist}}{{if and $artist $bpm}} · {{end}}{{if $bpm}}{{$bpm}} BPM{{end}}</p>{{end}}
       <dl class="song-facts">
         <div><dt>Plays</dt><dd>{{len .Plays}}</dd></div>
         <div><dt>Charts</dt><dd>{{len .Lineages}}</dd></div>
@@ -45,6 +46,16 @@
 <section class="chart-panel{{if $first}} is-active{{end}}" id="{{.Key}}" data-panel="{{.Key}}" role="tabpanel" aria-label="{{chartsLabel .Charts}}">
   {{if or .Linked (old $h.Version)}}
   <p class="lineage">{{range .Charts}}{{if ne . $h}}<span class="lineage-anchor" id="{{.Key}}"></span>{{end}}{{end}}<span class="lineage-label">{{if .Linked}}Chart lineage{{else}}Version{{end}}</span> {{chartsLabel .Charts}}</p>
+  {{end}}
+  {{with chartInfo $h}}
+  <ul class="chart-facts" aria-label="About the chart">
+    {{with .ClearDifficulty}}<li><span class="diff diff-{{.Class}}" title="How hard players on PIU Scores find it to clear for its level">{{.}}</span></li>{{end}}
+    {{if .ScoringLevel}}<li title="The level it scores like for players on PIU Scores"><b>{{printf "%.1f" .ScoringLevel}}</b> scoring level</li>{{end}}
+    {{with .TrustedNotes}}<li><b>{{score .}}</b> notes</li>{{end}}
+    {{with .StepArtist}}<li>Steps by <b>{{.}}</b></li>{{end}}
+    {{range .Skills}}<li class="skill">{{.}}</li>{{end}}
+    {{if hasFolder .Chart}}<li class="cf-more"><a href="{{progressURL .Chart.Key $h.Version}}">{{folderName .Chart}} level <span aria-hidden="true">→</span></a></li>{{end}}
+  </ul>
   {{end}}
   <div class="panel-summary" style="--stat-rows: {{statRows .}}">
     <div class="result m-{{$h.Chart.Mode.Class}}">
@@ -177,6 +188,7 @@
         <div class="a-extra">
           {{if ge .MaxCombo 0}}<span><b>{{.MaxCombo}}</b> max combo</span>{{end}}
           {{if ge .Kcal 0.0}}<span><b>{{kcal .Kcal}}</b> kcal</span>{{end}}
+          {{$listed := notesOff .}}{{if $listed}}<span class="a-warn" title="PIU Scores lists {{$listed}} notes for this chart: check the judgments for a typo">Judgments add up to {{.Judgments.Notes}} notes, not {{$listed}}</span>{{end}}
         </div>
         {{if .Note}}<p class="a-note">{{.Note}}</p>{{end}}
       </li>

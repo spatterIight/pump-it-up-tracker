@@ -19,6 +19,7 @@
     <a class="brand" href="{{url "/"}}" aria-label="PIU Tracker home">{{padEmblem "brand-mark"}}<span class="brand-word"><b>PIU</b><span>Tracker</span></span></a>
     <nav class="nav" aria-label="Main">
       <a href="{{url "/"}}"{{if eq .Nav "songs"}} aria-current="page"{{end}}>Songs</a>
+      <a href="{{url "/progress"}}"{{if eq .Nav "progress"}} aria-current="page"{{end}}>Progress</a>
       <a href="{{url "/activity"}}"{{if eq .Nav "activity"}} aria-current="page"{{end}}>Activity</a>
     </nav>
     <div class="topbar-end">
@@ -31,7 +32,7 @@
 </main>
 <footer class="footer wrap">
   <span>PIU Tracker {{.AppVersion}}</span>
-  <span>Pump It Up art © Andamiro, found via <a href="https://piuscores.arroweclip.se" rel="noopener">PIU Scores</a> and the <a href="https://pumpitup.fandom.com" rel="noopener">PIU Fandom wiki</a></span>
+  <span>Pump It Up art © Andamiro, found via <a href="https://piuscores.arroweclip.se" rel="noopener">PIU Scores</a> and the <a href="https://pumpitup.fandom.com" rel="noopener">PIU Fandom wiki</a> · Chart list and difficulties from <a href="https://piuscores.arroweclip.se" rel="noopener">PIU Scores</a></span>
 </footer>
 <div class="tooltip" role="tooltip" hidden></div>
 </body>

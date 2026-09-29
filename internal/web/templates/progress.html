@@ -1,0 +1,74 @@
+{{define "content"}}
+{{with .Progress}}
+<section class="page-head">
+  <p class="eyebrow">Progress</p>
+  <h1 class="display">{{.Version.Name}}</h1>
+  <p class="lede">How far you've got in the game's own terms: its PUMBILITY rating, and how much of each level you've cleared.</p>
+  {{template "progress-filter" (progressFilter "" .Version .Versions)}}
+</section>
+
+{{with .Rating}}
+<section class="rating-card">
+  <div class="rating-head">
+    <div class="rating-main">
+      <span class="stat-label">PUMBILITY</span>
+      <span class="rating-value">{{rating .Total}}</span>
+      <span class="stat-sub">{{if gt $.Progress.Recent 0.0}}<b class="up">{{signedRating $.Progress.Recent}}</b> in the last 30 days{{else}}no change in the last 30 days{{end}}</span>
+    </div>
+    <dl class="rating-facts">
+      <div><dt>Charts counted</dt><dd>{{len .Pool}} <small>of 50</small></dd></div>
+      <div><dt>To get in</dt><dd>{{if .Full}}beat {{rating .Cut}}{{else}}any clear{{end}}</dd></div>
+    </dl>
+    <a class="more" href="{{progressURL "pumbility" .Version}}">Your 50 charts <span aria-hidden="true">→</span></a>
+  </div>
+  {{if .History}}<div class="graph is-active rating-graph">{{ratingChart .}}</div>{{end}}
+  <p class="rating-note">{{if .Full}}Your 50 most valuable charts count. A new clear raises it only if it is worth more than {{rating .Cut}}, the least valuable of them.{{else}}Your 50 most valuable charts count, and you have {{len .Pool}}, so every clear of level 10 or higher adds its full value.{{end}}</p>
+</section>
+{{end}}
+
+{{if .Next}}
+<section class="section">
+  <div class="section-head">
+    <div>
+      <h2>Clear next</h2>
+      <p class="muted">The charts you haven't cleared that players on PIU Scores find easiest for their level{{if .Rating}}, with what a clear at AA would add to your PUMBILITY{{end}}</p>
+    </div>
+  </div>
+  <div class="next-grid">
+    {{range .Next}}
+    <div class="next-group">
+      <a class="next-head" href="{{progressURL .Key $.Progress.Version}}">{{template "ball" .Ref}}<span class="next-head-text"><b>{{folderName .Ref.Chart}}</b><small>{{.Label}}</small></span><span class="next-more" aria-hidden="true">→</span></a>
+      {{if .Charts}}<ol class="folder-list">{{range .Charts}}{{template "folder-row" .}}{{end}}</ol>{{else}}<p class="muted next-done">Every chart cleared.</p>{{end}}
+    </div>
+    {{end}}
+  </div>
+</section>
+{{end}}
+
+{{range .Groups}}
+<section class="section">
+  <div class="section-head">
+    <div>
+      <h2>{{.Mode.Name}} levels</h2>
+      <p class="muted">Charts cleared out of every chart at the level</p>
+    </div>
+  </div>
+  <div class="folder-grid">
+    {{range .Folders}}
+    <a class="folder{{if .Cleared}} has-clears{{end}}{{if and .Total (eq .Cleared .Total)}} is-complete{{end}}" href="{{progressURL .Key $.Progress.Version}}" title="{{folderName .Ref.Chart}}: {{.Cleared}} of {{.Total}} cleared">
+      {{template "ball" .Ref}}
+      <span class="folder-count"><b>{{.Cleared}}</b><small>/{{.Total}}</small></span>
+      <span class="folder-bar"><i style="width: {{gradeShare .Cleared .Total}}%"></i></span>
+    </a>
+    {{end}}
+  </div>
+</section>
+{{end}}
+{{else}}
+<section class="empty-hero">
+  {{padEmblem "empty-mark"}}
+  <h1 class="display">Nothing to measure yet</h1>
+  <p class="lede">Progress covers plays from Phoenix and Phoenix 2: PUMBILITY, and how much of each level you've cleared.</p>
+</section>
+{{end}}
+{{end}}

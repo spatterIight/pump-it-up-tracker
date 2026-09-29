@@ -152,7 +152,7 @@ func TestVersionKey(t *testing.T) {
 	}
 	wantProblem(t, `{"schema_version": 1, "scores": [
 		{"song": "Vook", "chart": "S7", "date": "2025-07-25", "version": "prime3", "score": 419400}
-	]}`, `scores[0] (Vook S7): version "prime3" is not a supported game version (expected phoenix, prime2 or xx)`)
+	]}`, `scores[0] (Vook S7): version "prime3" is not a supported game version (expected phoenix, phoenix2, prime2 or xx)`)
 }
 
 // A fail with no result is logged the same way in every version.
@@ -377,7 +377,7 @@ func TestInvalidLineages(t *testing.T) {
 		`[{}]`:                `a lineage links the charts of at least two versions`,
 		// The same version twice, however it is written.
 		`[{"prime2": "S7", "Prime 2": "S6", "phoenix": "S8"}]`: `songs: "Katkoi": lineages[0]: Prime 2 is listed twice; a lineage has one chart per version`,
-		`[{"prime3": "S7", "phoenix": "S8"}]`:                  `songs: "Katkoi": lineages[0]: "prime3" is not a supported game version (expected phoenix, prime2 or xx)`,
+		`[{"prime3": "S7", "phoenix": "S8"}]`:                  `songs: "Katkoi": lineages[0]: "prime3" is not a supported game version (expected phoenix, phoenix2, prime2 or xx)`,
 		`[{"prime2": "Q7", "phoenix": "S8"}]`:                  `songs: "Katkoi": lineages[0]: prime2: chart "Q7" is not in a recognised format`,
 		`[["S7", "S8"]]`:                                       `songs: "Katkoi": lineages: expected a mapping, got a list`,
 	}
@@ -439,9 +439,9 @@ func TestVersionList(t *testing.T) {
 	if _, err := LoadVersions(strings.NewReader(`{"schema_version": 1}`), append(Versions(), sliced)); err != nil {
 		t.Errorf("a pointer to it: %v", err)
 	}
-	// An empty log still has a current version.
+	// An empty log still has a current version: the newest.
 	tr := load(t, `{"schema_version": 1}`)
-	if tr.Current.ID != "phoenix" || len(tr.PlayedVersions()) != 0 {
+	if tr.Current.ID != "phoenix2" || len(tr.PlayedVersions()) != 0 {
 		t.Errorf("current = %s", tr.Current.ID)
 	}
 }

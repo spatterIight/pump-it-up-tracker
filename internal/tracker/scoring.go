@@ -7,13 +7,16 @@ import (
 )
 
 // ScoringSystem is how a game version scores and grades a play. Versions
-// that share a scoring system share personal bests across chart links; see
-// docs/development.md, "Adding a game version". Systems are compared with ==, so each
-// is a pointer or a value of a comparable type; a version list with any
-// other kind is refused.
+// whose scoring systems put scores on the same scale share personal bests
+// across chart links; see docs/development.md, "Adding a game version".
+// Systems are compared with ==, so each is a pointer or a value of a
+// comparable type; a version list with any other kind is refused.
 type ScoringSystem interface {
 	// Name names the scoring system in messages ("Phoenix").
 	Name() string
+	// Scale is the scale the system's scores are on. Scores on the same scale
+	// compare, even when their systems grade them differently.
+	Scale() *ScoreScale
 	// MaxScore is the highest score a chart can award, or 0 when there is no
 	// known limit.
 	MaxScore() int
@@ -33,38 +36,70 @@ type ScoringSystem interface {
 	Grades() []Grade
 	// Grade returns the grade a result earns, from its score and, when they
 	// were recorded, its judgments (nil otherwise). ok is false when the
-	// grade cannot be worked out: the system has no verified grade table, or
-	// it needs judgments that were not recorded.
+	// grade cannot be worked out: the system has no verified grade table for
+	// the score, or it needs judgments that were not recorded.
 	Grade(score int, j *Judgments) (g Grade, ok bool)
-	// GradeThresholds lists every grade with the lowest score that earns it,
-	// best first, when grades follow from the score alone; nil otherwise.
+	// GradeThresholds lists the grades that follow from the score alone, each
+	// with the lowest score that earns it, best first; nil when none do.
 	// Progress charts draw them as grade lines.
 	GradeThresholds() []GradeThreshold
 	// HasPlates reports whether the game awards plates.
 	HasPlates() bool
 }
 
+// ScoreScale is what a version's scores are measured on. Versions whose
+// scoring systems share a scale score plays the same way, so their scores
+// compare and personal bests carry across a chart link between them, even
+// when they grade the same score differently (Phoenix and Phoenix 2).
+type ScoreScale struct {
+	// Name names the scale in messages ("Phoenix").
+	Name string
+}
+
+// phoenixScale is the scale Phoenix scores plays on, out of 1,000,000 from
+// the judgments and max combo alone.
+var phoenixScale = &ScoreScale{Name: "Phoenix"}
+
 // PhoenixScoring scores and grades plays the way Pump It Up Phoenix does.
-var PhoenixScoring ScoringSystem = phoenixScoring{}
+var PhoenixScoring ScoringSystem = &phoenixScoring{name: "Phoenix", thresholds: gradeThresholds}
 
-type phoenixScoring struct{}
+// Phoenix2Scoring scores plays the way Phoenix does, but grades them the way
+// Pump It Up Phoenix 2 does: it raised every grade cutoff below AAA.
+var Phoenix2Scoring ScoringSystem = &phoenixScoring{name: "Phoenix 2", thresholds: phoenix2Thresholds}
 
-func (phoenixScoring) Name() string                               { return "Phoenix" }
-func (phoenixScoring) MaxScore() int                              { return MaxScore }
-func (phoenixScoring) ComputesScores() bool                       { return true }
-func (phoenixScoring) ComputeScore(j Judgments, maxCombo int) int { return ComputeScore(j, maxCombo) }
-func (phoenixScoring) CheckScore(score int, j *Judgments, maxCombo int) error {
+// phoenixScoring is the scoring of Phoenix and of the versions that keep its
+// score formula. Only the grade cutoffs differ between them.
+type phoenixScoring struct {
+	name string
+	// thresholds are the grades that follow from the score, best first. A
+	// score below the last one's minimum is graded as logged.
+	thresholds []GradeThreshold
+}
+
+func (s *phoenixScoring) Name() string         { return s.name }
+func (s *phoenixScoring) Scale() *ScoreScale   { return phoenixScale }
+func (s *phoenixScoring) MaxScore() int        { return MaxScore }
+func (s *phoenixScoring) ComputesScores() bool { return true }
+func (s *phoenixScoring) ComputeScore(j Judgments, maxCombo int) int {
+	return ComputeScore(j, maxCombo)
+}
+func (s *phoenixScoring) CheckScore(score int, j *Judgments, maxCombo int) error {
 	if j == nil || maxCombo < 0 {
 		return nil
 	}
 	return checkScore(score, *j, maxCombo)
 }
-func (phoenixScoring) Grades() []Grade { return phoenixGrades }
-func (phoenixScoring) Grade(score int, _ *Judgments) (Grade, bool) {
-	return GradeForScore(score), true
+func (s *phoenixScoring) Grades() []Grade { return phoenixGrades }
+func (s *phoenixScoring) Grade(score int, _ *Judgments) (Grade, bool) {
+	for _, t := range s.thresholds {
+		if score >= t.Min {
+			return t.Grade, true
+		}
+	}
+	return "", false
 }
-func (phoenixScoring) GradeThresholds() []GradeThreshold { return GradeThresholds() }
-func (phoenixScoring) HasPlates() bool                   { return true }
+func (s *phoenixScoring) GradeThresholds() []GradeThreshold { return slices.Clone(s.thresholds) }
+func (s *phoenixScoring) HasPlates() bool                   { return true }
 
 // MaxScore is the highest score a Phoenix chart awards.
 const MaxScore = 1_000_000
@@ -79,8 +114,8 @@ type GradeThreshold struct {
 	Min   int
 }
 
-// gradeThresholds lists every grade with the minimum score that earns it,
-// best first.
+// gradeThresholds lists every Phoenix grade with the minimum score that
+// earns it, best first.
 var gradeThresholds = []GradeThreshold{
 	{"SSS+", 995_000},
 	{"SSS", 990_000},
@@ -100,6 +135,26 @@ var gradeThresholds = []GradeThreshold{
 	{"F", 0},
 }
 
+// phoenix2Thresholds are the Phoenix 2 grades that follow from the score. It
+// awards Phoenix's grades, with the cutoffs below AAA raised. PIU Scores read
+// them off the official leaderboards: A+ and up exactly, and A to within a
+// few thousand points, as 800,000. Nothing on the leaderboards shows where
+// B, C and D start, so a score under 800,000 is graded as logged.
+var phoenix2Thresholds = []GradeThreshold{
+	{"SSS+", 995_000},
+	{"SSS", 990_000},
+	{"SS+", 985_000},
+	{"SS", 980_000},
+	{"S+", 975_000},
+	{"S", 970_000},
+	{"AAA+", 960_000},
+	{"AAA", 950_000},
+	{"AA+", 940_000},
+	{"AA", 920_000},
+	{"A+", 900_000},
+	{"A", 800_000},
+}
+
 var phoenixGrades = func() []Grade {
 	gs := make([]Grade, len(gradeThresholds))
 	for i, t := range gradeThresholds {
@@ -110,12 +165,8 @@ var phoenixGrades = func() []Grade {
 
 // GradeForScore returns the grade a score earns in Phoenix.
 func GradeForScore(score int) Grade {
-	for _, t := range gradeThresholds {
-		if score >= t.Min {
-			return t.Grade
-		}
-	}
-	return "F"
+	g, _ := PhoenixScoring.Grade(score, nil)
+	return g
 }
 
 // GradeThresholds returns every Phoenix grade with its minimum score, best
