@@ -15,17 +15,6 @@
 {{end}}
 
 <section class="section">
-  <div class="section-head">
-    <div>
-      <h2>How it's worked out</h2>
-      {{if eq .Version.ID "phoenix2"}}
-      <p class="muted formula">Each cleared single or double of level 10 or higher is worth a base for its level, 130 + 5 × level (plus 5 per level over 24), times its grade's multiplier plus a small bonus for its plate: 1.37 for an AA, 1.50 for an SSS+, and up to 0.02 more for a Perfect Game. A single is priced as a double one level higher. Your 50 most valuable charts count. Phoenix 2 does not publish this: PIU Scores worked it out from the official breakdowns, and grades below A, which Phoenix 2 does not publish either, are taken as B from 700,000, C from 600,000 and D from 500,000.</p>
-      {{else}}
-      <p class="muted formula">Each cleared single or double of level 10 or higher is worth a base for its level, 100 + 5 × (level − 10) × (level − 9), times a multiplier for its grade: 1 for an AA, 1.5 for an SSS+, 0.8 for an A. Plates don't count. Your 50 most valuable charts count, singles and doubles together.</p>
-      {{end}}
-      <p class="muted formula">This counts the plays you've logged, so it matches the game's only if every best you've set is logged. Only {{.Version.Name}} plays count, as in the game.</p>
-    </div>
-  </div>
   {{if .Rating.Charts}}
   <ol class="rated-list">
     {{range .Rating.Charts}}

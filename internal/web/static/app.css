@@ -1240,8 +1240,6 @@ span.ball.m-coop { font-size: 12px; }
 .rating-graph { margin-top: 14px; }
 .rating-card > .rating-graph:first-child { margin-top: 0; }
 .rating-note { margin: 10px 4px 0; font-size: 13px; color: var(--text-2); }
-.rating-note a, .formula a { color: var(--cyan); }
-.formula { margin: 6px 0 0 21px; max-width: 76ch; line-height: 1.5; }
 
 .next-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .next-group { padding: 12px 14px 14px; }
@@ -1415,7 +1413,6 @@ a.frow-inner { color: inherit; }
   .rated-inner { grid-template-columns: 22px 64px minmax(0, 1fr) auto; padding: 8px 14px 8px 12px; }
   .rated-thumb { width: 64px; }
   .rated-value { font-size: 17px; }
-  .formula { margin-left: 19px; }
 }
 
 /* ---------- Responsive ---------- */

@@ -28,7 +28,7 @@ func TestProgressPages(t *testing.T) {
 		`href="/progress/d28"`,
 		// A clear at AA of an S16 adds its full value while the pool is not full.
 		`What a clear at AA would add to your PUMBILITY">+310</span>`)
-	wantNone(t, "progress", body, `class="chips version-filter"`, `href="/progress/coop2"`)
+	wantNone(t, "progress", body, `class="chips version-filter"`, `href="/progress/coop2"`, "worked out")
 
 	_, body = get(t, h, "/progress/s16")
 	wantAll(t, "S16", body,
@@ -57,9 +57,8 @@ func TestProgressPages(t *testing.T) {
 		`<h1 class="display">1,803</h1>`,
 		`<span class="rated-song">Nemesis</span><span class="rated-sub">838,531 · Sun 27 Sep 2026</span>`,
 		`<span class="rated-value">279</span>`,
-		`AA <b>+31</b>`,
-		`100 + 5 × (level − 10) × (level − 9)`)
-	wantNone(t, "PUMBILITY", body, "rated-cut", "est.")
+		`AA <b>+31</b>`)
+	wantNone(t, "PUMBILITY", body, "rated-cut", "est.", "worked out")
 	if n := strings.Count(body, `<li class="rated">`); n != 11 {
 		t.Errorf("%d rated charts, want 11", n)
 	}
@@ -166,7 +165,7 @@ func TestPhoenix2Progress(t *testing.T) {
 	wantAll(t, "Phoenix progress", body, `<h1 class="display">Phoenix</h1>`, `<span class="rating-value">115.5</span>`, `href="/progress/s11?version=phoenix"`)
 
 	_, body = get(t, h, "/progress/pumbility")
-	wantAll(t, "PUMBILITY", body, `130 + 5 × level`, `est.</small>`, `alt="Marvelous Game"`, `<span class="rated-value">265.24</span>`)
+	wantAll(t, "PUMBILITY", body, `est.</small>`, `alt="Marvelous Game"`, `<span class="rated-value">265.24</span>`)
 
 	// The Phoenix chart the chart list says is the same steps carries on.
 	_, body = get(t, h, "/song/big-daddy")

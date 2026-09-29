@@ -22,7 +22,7 @@
     <a class="more" href="{{progressURL "pumbility" .Version}}">Your 50 charts <span aria-hidden="true">→</span></a>
   </div>
   {{if .History}}<div class="graph is-active rating-graph">{{ratingChart .}}</div>{{end}}
-  <p class="rating-note">{{if .Full}}Your 50 most valuable charts count. A new clear raises it only if it is worth more than {{rating .Cut}}, the least valuable of them.{{else}}Your 50 most valuable charts count, and you have {{len .Pool}}, so every clear of level 10 or higher adds its full value.{{end}} <a href="{{progressURL "pumbility" .Version}}">How it's worked out</a></p>
+  <p class="rating-note">{{if .Full}}Your 50 most valuable charts count. A new clear raises it only if it is worth more than {{rating .Cut}}, the least valuable of them.{{else}}Your 50 most valuable charts count, and you have {{len .Pool}}, so every clear of level 10 or higher adds its full value.{{end}}</p>
 </section>
 {{end}}
 
