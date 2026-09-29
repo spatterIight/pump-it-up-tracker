@@ -45,6 +45,7 @@ type Server struct {
 	base         string
 	pages        map[string]*template.Template
 	static       fs.FS
+	staticFiles  map[string]bool
 	assetVersion string
 }
 
@@ -72,12 +73,14 @@ func New(opts Options) (*Server, error) {
 		return nil, err
 	}
 	s.static = static
+	s.staticFiles = map[string]bool{}
 	h := sha256.New()
 	fs.WalkDir(static, ".", func(p string, d fs.DirEntry, err error) error {
 		if err == nil && !d.IsDir() {
 			b, _ := fs.ReadFile(static, p)
 			h.Write([]byte(p))
 			h.Write(b)
+			s.staticFiles[p] = true
 		}
 		return nil
 	})

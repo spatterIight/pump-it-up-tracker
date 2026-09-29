@@ -1,10 +1,14 @@
-{{define "ball"}}<span class="ball m-{{.Mode.Class}}" title="{{.Mode.Name}} {{.Ball}}">{{.Ball}}</span>{{end}}
+{{/* ball takes anything with a Version and a Chart: a play, a chart history or a ballRef. */}}
+{{define "ball"}}{{with ballArt .Version .Chart}}<img class="ball" src="{{.}}" alt="{{$.Chart.Mode.Name}} {{$.Chart.Ball}}" title="{{$.Chart.Mode.Name}} {{$.Chart.Ball}}">{{else}}<span class="ball m-{{.Chart.Mode.Class}}" title="{{.Chart.Mode.Name}} {{.Chart.Ball}}">{{.Chart.Ball}}</span>{{end}}{{end}}
 
-{{define "grade"}}{{if .}}<span class="grade g-{{gradeClass .}} tier-{{.Tier}}">{{.}}</span>{{end}}{{end}}
+{{define "grade"}}{{with gradeArt . false}}<img class="grade" src="{{.}}" alt="{{$}}">{{end}}{{end}}
 
-{{define "plate"}}{{if .}}<span class="plate plate-{{plateClass .}}" title="{{.Name}}">{{.Name}}</span>{{end}}{{end}}
+{{/* play-grade is a play's grade, cracked on a stage break as on the result screen. */}}
+{{define "play-grade"}}{{with gradeArt .Grade .Broken}}<img class="grade" src="{{.}}" alt="{{$.Grade}}{{if $.Broken}} (stage break){{end}}">{{end}}{{end}}
 
-{{define "plate-short"}}{{if .}}<span class="plate plate-{{plateClass .}} is-short" title="{{.Name}}">{{.}}</span>{{end}}{{end}}
+{{define "plate"}}{{with plateArt .}}<span class="plate-full"><img class="plate" src="{{.}}" alt=""><span class="plate-name">{{$.Name}}</span></span>{{end}}{{end}}
+
+{{define "plate-short"}}{{with plateArt .}}<img class="plate" src="{{.}}" alt="{{$.Name}}" title="{{$.Name}}">{{end}}{{end}}
 
 {{define "delta"}}{{if not .HasScore}}<span class="tag tag-fail">Failed</span>{{else if .Broken}}<span class="tag tag-break">Stage break</span>{{else if .FirstClear}}<span class="tag tag-first">First clear</span>{{else if .IsPB}}<span class="delta is-up" title="New personal best">{{signed .Delta}}</span>{{else}}<span class="delta" title="Compared with the personal best at the time">{{signed .Delta}}</span>{{end}}{{end}}
 

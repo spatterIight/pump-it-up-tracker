@@ -35,8 +35,16 @@ For each song, art is looked up in this order and downloaded once into the data 
 4. **The [PIU Fandom wiki](https://pumpitup.fandom.com):** the lead image of the song's page.
 5. **A generated placeholder** (gradient + title), until something is found.
 
-Songs with no art found are looked up again after a week, or straight away when their `image` changes. Network errors are not remembered, so they are simply retried on the next start. Jacket art is © Andamiro: the app only caches it on your server and never bakes it into the image.
+Songs with no art found are looked up again after a week, or straight away when their `image` changes. Network errors are not remembered, so they are simply retried on the next start. Jacket art is © Andamiro, and the app only caches it on your server: it is not part of the image.
+
+## Game art
+
+Grades, plates and level balls are shown with the game's own art, © Andamiro, which is built into the app (see [`COPYRIGHT.txt`](../internal/web/static/piu/COPYRIGHT.txt)). It comes from [PIU Scores](https://piuscores.arroweclip.se):
+
+- A stage break shows its grade cracked, as the result screen does.
+- Phoenix charts get Phoenix's level balls. Prime 2 and XX charts, and performance charts in every version, get the balls of XX and older mixes.
+- A chart with no ball art, such as S29, gets a drawn ball instead.
 
 ## Container image
 
-The image is a static binary on `distroless/static:nonroot` (about 20 MB). It runs with a read-only root filesystem and no capabilities.
+The image is a static binary on `distroless/static:nonroot` (about 25 MB). It runs with a read-only root filesystem and no capabilities.

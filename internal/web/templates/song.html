@@ -26,7 +26,7 @@
   {{range $i, $l := .Lineages}}
   {{$first := and (eq $gi 0) (eq $i 0)}}
   <a class="chart-tab{{if $first}} is-active{{end}}" role="tab" href="#{{.Key}}" data-tab="{{.Key}}"{{with aliases .}} data-aliases="{{.}}"{{end}} aria-controls="{{.Key}}" aria-selected="{{if $first}}true{{else}}false{{end}}">
-    {{template "ball" .Newest.Chart}}
+    {{template "ball" .Newest}}
     <span class="chart-tab-text">
       <span class="chart-tab-name">{{.Newest.Chart.Mode.Name}} {{.Newest.Chart.Ball}}</span>
       {{if .Linked}}<span class="chart-tab-lineage">{{chartsLabel .Charts}}</span>{{end}}
@@ -49,7 +49,7 @@
   <div class="panel-summary" style="--stat-rows: {{statRows .}}">
     <div class="result m-{{$h.Chart.Mode.Class}}">
       <div class="result-head">
-        {{template "ball" $h.Chart}}
+        {{template "ball" $h}}
         <span class="result-title">
           <span class="stat-label">{{if $r.Cleared}}Personal best{{else if $r.Best}}Best attempt · not cleared yet{{else}}No result yet · not cleared{{end}}</span>
           <span class="result-chart">{{$h.Chart.Mode.Name}} {{$h.Chart.Ball}}</span>
@@ -91,7 +91,7 @@
     {{range olderRecords .}}
     <div class="stat stat-record">
       <span class="stat-label">Best in {{versionNames .}}</span>
-      <span class="stat-value">{{if .Best}}{{template "grade" .Best.Grade}}<span>{{score .Best.Score}}</span>{{else}}–{{end}}</span>
+      <span class="stat-value">{{if .Best}}{{template "play-grade" .Best}}<span>{{score .Best.Score}}</span>{{else}}–{{end}}</span>
       <span class="stat-sub">{{chartNames .Charts}} · {{if .Cleared}}{{plural .Clears "clear" "clears"}}{{else}}not cleared{{end}}</span>
     </div>
     {{end}}
@@ -157,7 +157,7 @@
           {{template "delta" .}}
         </div>
         {{if .HasScore}}
-        <div class="a-grade">{{template "grade" .Grade}}{{template "plate" .Plate}}</div>
+        <div class="a-grade">{{template "play-grade" .}}{{template "plate" .Plate}}</div>
         {{else}}
         <div class="a-grade"><span class="dash" title="No grade">–</span>{{if .Version.Scoring.HasPlates}}<span class="dash dash-plate" title="No plate">–</span>{{end}}</div>
         {{end}}
