@@ -290,7 +290,8 @@ func TestAPIAndHealth(t *testing.T) {
 func TestBasePath(t *testing.T) {
 	h := newTestServer(t, "/piu/")
 	resp, body := get(t, h, "/piu/")
-	if resp.StatusCode != 200 || !strings.Contains(body, `href="/piu/song/big-daddy"`) || !strings.Contains(body, `href="/piu/static/app.css?v=`) {
+	// app.js reads data-base to tell the app's pages from other links.
+	if resp.StatusCode != 200 || !strings.Contains(body, `href="/piu/song/big-daddy"`) || !strings.Contains(body, `href="/piu/static/app.css?v=`) || !strings.Contains(body, `<html lang="en" data-base="/piu">`) {
 		t.Errorf("prefixed home: status %d", resp.StatusCode)
 	}
 	if resp, _ := get(t, h, "/piu"); resp.StatusCode != http.StatusMovedPermanently || resp.Header.Get("Location") != "/piu/" {
