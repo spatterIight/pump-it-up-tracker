@@ -91,11 +91,11 @@ func TestResolverDownloadsCachesAndRemembersMisses(t *testing.T) {
 	if st := r.Status(); st.Resolved != 1 || st.Missing != 1 || st.Pending != 0 {
 		t.Fatalf("status = %+v", st)
 	}
-	path, _, ok := r.Lookup("big-daddy")
-	if !ok || filepath.Base(path) != "big-daddy.png" {
-		t.Fatalf("lookup = %q, %v", path, ok)
+	img, ok := r.Lookup("big-daddy")
+	if !ok || img.Name() != "big-daddy.png" || img.Bundled() {
+		t.Fatalf("lookup = %+v, %v", img, ok)
 	}
-	if b, _ := os.ReadFile(path); string(b) != string(pngBytes) {
+	if b, _ := os.ReadFile(img.path); string(b) != string(pngBytes) {
 		t.Fatalf("cached bytes = %q", b)
 	}
 	if r.Version("big-daddy") == "p" || r.Version("nothing") != "p" {
@@ -118,7 +118,7 @@ func TestResolverDownloadsCachesAndRemembersMisses(t *testing.T) {
 	r3 := newResolver()
 	r3.Start(context.Background(), []Song{{Slug: "nothing", Title: "Nothing", Image: srv.URL + "/BigDaddy.png"}})
 	r3.Wait()
-	if _, _, ok := r3.Lookup("nothing"); !ok {
+	if _, ok := r3.Lookup("nothing"); !ok {
 		t.Errorf("image URL override was not downloaded")
 	}
 }
@@ -154,13 +154,13 @@ func TestResolverCustomDirAndFetchDisabled(t *testing.T) {
 		{Slug: "none", Title: "None"},
 	})
 	r.Wait()
-	if p, _, ok := r.Lookup("big-daddy"); !ok || filepath.Base(p) != "big-daddy.jpg" {
-		t.Errorf("slug-named custom art: %q %v", p, ok)
+	if img, ok := r.Lookup("big-daddy"); !ok || img.Name() != "big-daddy.jpg" {
+		t.Errorf("slug-named custom art: %q %v", img.Name(), ok)
 	}
-	if p, _, ok := r.Lookup("other"); !ok || filepath.Base(p) != "named.png" {
-		t.Errorf("configured custom art: %q %v", p, ok)
+	if img, ok := r.Lookup("other"); !ok || img.Name() != "named.png" {
+		t.Errorf("configured custom art: %q %v", img.Name(), ok)
 	}
-	if _, _, ok := r.Lookup("escape"); ok {
+	if _, ok := r.Lookup("escape"); ok {
 		t.Errorf("path traversal resolved")
 	}
 	if st := r.Status(); st.Resolved != 2 || st.Missing != 2 || st.Pending != 0 {

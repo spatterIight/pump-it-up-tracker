@@ -7,12 +7,12 @@ import (
 	"embed"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"html/template"
+	"io"
 	"io/fs"
 	"log/slog"
 	"net/http"
-	"os"
-	"path"
 	"strings"
 	"time"
 
@@ -311,15 +311,18 @@ func (s *Server) art(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	if p, mod, ok := s.opts.Art.Lookup(slug); ok {
-		f, err := os.Open(p)
+	if img, ok := s.opts.Art.Lookup(slug); ok {
+		f, err := img.Open()
 		if err == nil {
 			defer f.Close()
-			w.Header().Set("Cache-Control", "public, max-age=604800")
-			http.ServeContent(w, r, path.Base(p), mod, f)
-			return
+			if rs, ok := f.(io.ReadSeeker); ok {
+				w.Header().Set("Cache-Control", "public, max-age=604800")
+				http.ServeContent(w, r, img.Name(), img.ModTime(), rs)
+				return
+			}
+			err = errors.New("the file cannot seek")
 		}
-		s.opts.Logger.Warn("art file vanished; serving a placeholder", "song", song.Title, "err", err)
+		s.opts.Logger.Warn("cannot serve art; serving a placeholder", "song", song.Title, "err", err)
 	}
 	w.Header().Set("Content-Type", "image/svg+xml")
 	// Not cached, so that real art replaces it once it has been downloaded.
@@ -421,7 +424,7 @@ func (s *Server) data(w http.ResponseWriter, r *http.Request) {
 	songs := make([]apiSong, 0, len(t.Songs))
 	for _, song := range t.Songs {
 		as := apiSong{Title: song.Title, Slug: song.Slug, Artist: song.Artist, Art: "placeholder"}
-		if _, _, ok := s.opts.Art.Lookup(song.Slug); ok {
+		if _, ok := s.opts.Art.Lookup(song.Slug); ok {
 			as.Art = "image"
 		}
 		for _, h := range song.Charts {

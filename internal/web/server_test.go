@@ -214,6 +214,35 @@ func TestArt(t *testing.T) {
 	}
 }
 
+func TestBundledArt(t *testing.T) {
+	tr, err := tracker.Load(strings.NewReader(`{"schema_version": 1, "scores": [
+		{"song": "Conflict", "chart": "S15", "date": "2026-08-02", "score": 858669}
+	]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	jackets, err := art.Jackets()
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolver := art.New(art.Options{CacheDir: t.TempDir(), Bundle: jackets})
+	resolver.Start(context.Background(), []art.Song{{Slug: "conflict", Title: "Conflict"}})
+	srv, err := New(Options{Tracker: tr, Art: resolver})
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := srv.Handler()
+	resp, body := get(t, h, "/art/conflict")
+	if resp.StatusCode != 200 || resp.Header.Get("Content-Type") != "image/webp" || !strings.HasPrefix(body, "RIFF") {
+		t.Errorf("bundled art: status %d, type %q", resp.StatusCode, resp.Header.Get("Content-Type"))
+	}
+	_, home := get(t, h, "/")
+	wantAll(t, "home", home, `src="/art/conflict?v=`+resolver.Version("conflict")+`"`)
+	if v := resolver.Version("conflict"); !strings.HasPrefix(v, "b") {
+		t.Errorf("version %q", v)
+	}
+}
+
 func TestAPIAndHealth(t *testing.T) {
 	h := newTestServer(t, "/")
 	resp, body := get(t, h, "/healthz")

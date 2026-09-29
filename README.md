@@ -66,4 +66,4 @@ go run ./cmd/pump-it-up-tracker validate path/to/tracker.json
 
 ## Copyright
 
-Pump It Up and its art are © Andamiro. The app includes the game's grade, plate and level-ball images, which come from [PIU Scores](https://piuscores.arroweclip.se); [`COPYRIGHT.txt`](internal/web/static/piu/COPYRIGHT.txt) lists them. Jacket art is downloaded to your own server and is not part of the app. This is a personal tracker, not affiliated with Andamiro.
+Pump It Up and its art are © Andamiro. The app includes the game's grade, plate and level-ball images and 1,080 song jackets, which come from [PIU Scores](https://piuscores.arroweclip.se); a `COPYRIGHT.txt` beside each set lists them ([game art](internal/web/static/piu/COPYRIGHT.txt), [jackets](internal/art/jackets/COPYRIGHT.txt)). Jackets it downloads for other songs stay on your own server. This is a personal tracker, not affiliated with Andamiro.

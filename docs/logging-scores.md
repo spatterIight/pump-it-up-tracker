@@ -68,4 +68,4 @@ The role writes the variables to a JSON file that this app reads (`schema_versio
 }
 ```
 
-`songs` is optional metadata keyed by title. It holds `artist`, `bpm`, `image`, which is either an image URL or a file name in the custom art directory, and `lineages` (see [Chart continuity](game-versions.md#chart-continuity)). Titles are matched case-insensitively. See [`sample/tracker.json`](../sample/tracker.json) for a complete example.
+`songs` is optional metadata keyed by title. It holds `artist`, `bpm`, `image`, which is either an image URL or a file name in the custom art directory (see [Jacket art](configuration.md#jacket-art)), and `lineages` (see [Chart continuity](game-versions.md#chart-continuity)). Titles are matched case-insensitively. See [`sample/tracker.json`](../sample/tracker.json) for a complete example.

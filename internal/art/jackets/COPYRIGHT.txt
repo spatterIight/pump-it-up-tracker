@@ -1,0 +1,19 @@
+Pump It Up jacket art
+=====================
+
+Every image in this directory is a song jacket from the Pump It Up arcade
+games, © ANDAMIRO CO., LTD., and of the artists and labels credited in the
+game. The rights holders keep the copyright: the images are not the work of
+this project and are not licensed with it. They are included only so that
+this personal score tracker can show each song with its jacket.
+
+They were downloaded from PIU Scores (https://piuscores.arroweclip.se), from
+its image host https://piuimages.arroweclip.se/songs/, on 2026-09-16, and
+converted from PNG to WebP (quality 85) to make them smaller. Nothing else
+was changed.
+
+Each file keeps its name from that host, so Rockthehouse.webp here is
+https://piuimages.arroweclip.se/songs/Rockthehouse.png. The one exception is
+Step-2.webp, which is songs/Step.png there: STEP.png is a different song, and
+some file systems cannot hold both names. index.json maps every name on the
+host to its file here.

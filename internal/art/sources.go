@@ -20,24 +20,34 @@ type PIUScores struct {
 	BaseURL string
 }
 
+// piuScoresSongs is where PIU Scores keeps its jackets.
+const piuScoresSongs = "https://piuimages.arroweclip.se/songs/"
+
 func (PIUScores) Name() string { return "piuscores" }
 
 func (p PIUScores) URLs(_ context.Context, s Song) ([]string, error) {
 	base := p.BaseURL
 	if base == "" {
-		base = "https://piuimages.arroweclip.se/songs/"
+		base = piuScoresSongs
 	}
 	var out []string
-	seen := map[string]bool{}
-	// The title as written first, then with every word capitalised, since
-	// the file name keeps the site's own capitalisation of the title.
-	for _, name := range []string{alnum(s.Title), alnum(capitalizeWords(s.Title))} {
-		if name != "" && !seen[name] {
-			seen[name] = true
-			out = append(out, base+url.PathEscape(name)+".png")
-		}
+	for _, name := range piuScoresNames(s.Title) {
+		out = append(out, base+url.PathEscape(name)+".png")
 	}
 	return out, nil
+}
+
+// piuScoresNames are the names PIU Scores may give a song's jacket: the title
+// as written first, then with every word capitalised, since the file name
+// keeps the site's own capitalisation of the title.
+func piuScoresNames(title string) []string {
+	var out []string
+	for _, name := range []string{alnum(title), alnum(capitalizeWords(title))} {
+		if name != "" && (len(out) == 0 || out[0] != name) {
+			out = append(out, name)
+		}
+	}
+	return out
 }
 
 func alnum(s string) string {

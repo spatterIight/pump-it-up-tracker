@@ -4,12 +4,14 @@
 //
 //  1. the custom art directory: the file named by the song's image setting,
 //     or a file named after the song's slug (big-daddy.png)
-//  2. the song's image setting, when it is a URL
-//  3. each configured Source (PIU Scores, then the PIU Fandom wiki)
+//  2. the song's image setting, when it is a URL: the jacket built into the
+//     app when the URL is one of PIU Scores', otherwise the URL itself
+//  3. the jackets built into the app (see Jackets), by title
+//  4. each configured Source (PIU Scores, then the PIU Fandom wiki)
 //
-// Found images are downloaded once into the cache directory. Songs for which
-// nothing was found are retried after a while. Until a song has art, a
-// generated placeholder is served in its place.
+// Images from the internet are downloaded once into the cache directory.
+// Songs for which nothing was found are retried after a while. Until a song
+// has art, a generated placeholder is served in its place.
 package art
 
 import (
@@ -18,7 +20,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"io"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"os"
@@ -50,6 +54,8 @@ type Options struct {
 	CacheDir string
 	// CustomDir optionally holds images supplied by the user.
 	CustomDir string
+	// Bundle optionally holds jackets to use before looking online.
+	Bundle *Bundle
 	// FetchEnabled allows downloading art from the internet.
 	FetchEnabled bool
 	Sources      []Source
@@ -68,15 +74,39 @@ type Resolver struct {
 	opts Options
 
 	mu      sync.RWMutex
-	images  map[string]image
+	images  map[string]Image
 	pending int
 	missing int
 	done    chan struct{}
 }
 
-type image struct {
+// Image is a song's art: a file on disk, or a jacket from a Bundle.
+type Image struct {
+	fsys    fs.FS // the bundle's files, nil for a file on disk
 	path    string
 	modTime time.Time
+	version string
+}
+
+func diskImage(path string, fi fs.FileInfo) Image {
+	return Image{path: path, modTime: fi.ModTime(), version: strconv.FormatInt(fi.ModTime().Unix(), 36)}
+}
+
+// Name is the image's file name, which tells its type.
+func (i Image) Name() string { return filepath.Base(i.path) }
+
+// ModTime is when a file on disk last changed, and zero for a bundled jacket.
+func (i Image) ModTime() time.Time { return i.modTime }
+
+// Bundled reports whether the image is a jacket from a Bundle.
+func (i Image) Bundled() bool { return i.fsys != nil }
+
+// Open opens the image. The file can also seek (io.Seeker).
+func (i Image) Open() (fs.File, error) {
+	if i.fsys != nil {
+		return i.fsys.Open(i.path)
+	}
+	return os.Open(i.path)
 }
 
 // meta is stored next to each cached image (or in place of one, when nothing
@@ -107,7 +137,7 @@ func New(opts Options) *Resolver {
 	}
 	done := make(chan struct{})
 	close(done)
-	return &Resolver{opts: opts, images: map[string]image{}, done: done}
+	return &Resolver{opts: opts, images: map[string]Image{}, done: done}
 }
 
 // Start resolves art from disk right away and, when fetching is enabled,
@@ -116,6 +146,10 @@ func (r *Resolver) Start(ctx context.Context, songs []Song) {
 	var queue []Song
 	for _, s := range songs {
 		if img, ok := r.fromCustomDir(s); ok {
+			r.set(s.Slug, img)
+			continue
+		}
+		if img, ok := r.fromBundle(s); ok {
 			r.set(s.Slug, img)
 			continue
 		}
@@ -171,23 +205,23 @@ func (r *Resolver) Status() Status {
 	return Status{Resolved: len(r.images), Pending: r.pending, Missing: r.missing}
 }
 
-// Lookup returns the image file for a song, if it has one.
-func (r *Resolver) Lookup(slug string) (path string, modTime time.Time, ok bool) {
+// Lookup returns the image for a song, if it has one.
+func (r *Resolver) Lookup(slug string) (Image, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	img, ok := r.images[slug]
-	return img.path, img.modTime, ok
+	return img, ok
 }
 
 // Version identifies the art currently served for a song, for cache busting.
 func (r *Resolver) Version(slug string) string {
-	if _, mod, ok := r.Lookup(slug); ok {
-		return strconv.FormatInt(mod.Unix(), 36)
+	if img, ok := r.Lookup(slug); ok {
+		return img.version
 	}
 	return "p"
 }
 
-func (r *Resolver) set(slug string, img image) {
+func (r *Resolver) set(slug string, img Image) {
 	r.mu.Lock()
 	r.images[slug] = img
 	r.mu.Unlock()
@@ -207,9 +241,9 @@ func remoteImage(s Song) string {
 
 var imageExtensions = []string{".png", ".jpg", ".jpeg", ".webp", ".gif", ".avif"}
 
-func (r *Resolver) fromCustomDir(s Song) (image, bool) {
+func (r *Resolver) fromCustomDir(s Song) (Image, bool) {
 	if r.opts.CustomDir == "" {
-		return image{}, false
+		return Image{}, false
 	}
 	var candidates []string
 	if s.Image != "" && !isURL(s.Image) {
@@ -222,40 +256,68 @@ func (r *Resolver) fromCustomDir(s Song) (image, bool) {
 	}
 	for _, c := range candidates {
 		if fi, err := os.Stat(c); err == nil && fi.Mode().IsRegular() {
-			return image{path: c, modTime: fi.ModTime()}, true
+			return diskImage(c, fi), true
 		}
 	}
 	if s.Image != "" && !isURL(s.Image) {
 		r.opts.Logger.Warn("configured art file not found in the custom art directory; looking elsewhere", "song", s.Title, "file", s.Image)
 	}
-	return image{}, false
+	return Image{}, false
+}
+
+// fromBundle finds a song's jacket in the bundle: the one its image URL names,
+// or else, when it has none, the one for its title.
+func (r *Resolver) fromBundle(s Song) (Image, bool) {
+	b := r.opts.Bundle
+	if b == nil {
+		return Image{}, false
+	}
+	var file string
+	var ok bool
+	if u := remoteImage(s); u != "" {
+		file, ok = b.byURL(u)
+	} else {
+		file, ok = b.byTitle(s.Title)
+	}
+	if !ok {
+		return Image{}, false
+	}
+	body, err := fs.ReadFile(b.fsys, file)
+	if err != nil {
+		r.opts.Logger.Warn("bundled jacket unreadable; looking elsewhere", "song", s.Title, "file", file, "err", err)
+		return Image{}, false
+	}
+	h := fnv.New32a()
+	h.Write(body)
+	r.opts.Logger.Debug("using a bundled jacket", "song", s.Title, "file", file)
+	return Image{fsys: b.fsys, path: file, version: "b" + strconv.FormatUint(uint64(h.Sum32()), 36)}, true
 }
 
 func (r *Resolver) metaPath(slug string) string {
 	return filepath.Join(r.opts.CacheDir, slug+".json")
 }
 
-func (r *Resolver) fromCache(s Song) (*meta, image, bool) {
+func (r *Resolver) fromCache(s Song) (*meta, Image, bool) {
 	if r.opts.CacheDir == "" {
-		return nil, image{}, false
+		return nil, Image{}, false
 	}
 	b, err := os.ReadFile(r.metaPath(s.Slug))
 	if err != nil {
-		return nil, image{}, false
+		return nil, Image{}, false
 	}
 	var m meta
 	if json.Unmarshal(b, &m) != nil {
-		return nil, image{}, false
+		return nil, Image{}, false
 	}
 	if m.Missing || m.File == "" || m.Wanted != remoteImage(s) {
-		return &m, image{}, false
+		return &m, Image{}, false
 	}
 	path := filepath.Join(r.opts.CacheDir, filepath.Base(m.File))
 	fi, err := os.Stat(path)
 	if err != nil {
-		return &m, image{}, false
+		return &m, Image{}, false
 	}
-	return &m, image{path: path, modTime: fi.ModTime()}, true
+	return &m, diskImage(path, fi), true
 }
 
 func (r *Resolver) fetchAll(ctx context.Context, songs []Song) {
@@ -388,28 +450,28 @@ func sniff(b []byte) string {
 	return ""
 }
 
-func (r *Resolver) store(s Song, source, url string, body []byte, ext string) (image, error) {
+func (r *Resolver) store(s Song, source, url string, body []byte, ext string) (Image, error) {
 	final := filepath.Join(r.opts.CacheDir, s.Slug+ext)
 	tmp, err := os.CreateTemp(r.opts.CacheDir, "."+s.Slug+"-*")
 	if err != nil {
-		return image{}, err
+		return Image{}, err
 	}
 	if _, err := tmp.Write(body); err != nil {
 		tmp.Close()
 		os.Remove(tmp.Name())
-		return image{}, err
+		return Image{}, err
 	}
 	if err := tmp.Close(); err != nil {
 		os.Remove(tmp.Name())
-		return image{}, err
+		return Image{}, err
 	}
 	if err := os.Chmod(tmp.Name(), 0o644); err != nil {
 		os.Remove(tmp.Name())
-		return image{}, err
+		return Image{}, err
 	}
 	if err := os.Rename(tmp.Name(), final); err != nil {
 		os.Remove(tmp.Name())
-		return image{}, err
+		return Image{}, err
 	}
 	for _, other := range imageExtensions {
 		if other != ext {
@@ -419,9 +481,9 @@ func (r *Resolver) store(s Song, source, url string, body []byte, ext string) (i
 	r.writeMeta(s.Slug, meta{Wanted: remoteImage(s), Source: source, URL: url, File: filepath.Base(final), CheckedAt: time.Now().UTC()})
 	fi, err := os.Stat(final)
 	if err != nil {
-		return image{}, err
+		return Image{}, err
 	}
-	return image{path: final, modTime: fi.ModTime()}, nil
+	return diskImage(final, fi), nil
 }
 
 func (r *Resolver) writeMeta(slug string, m meta) {
