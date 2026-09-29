@@ -165,6 +165,8 @@ code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospac
   width: 100%;
   aspect-ratio: 700 / 393;
   object-fit: cover;
+  /* Dark, not the bright frame, until the jacket has loaded. */
+  background: var(--well);
   clip-path: polygon(calc(var(--cut) - 1.2px) 0, 100% 0, 100% calc(100% - var(--cut) + 1.2px), calc(100% - var(--cut) + 1.2px) 100%, 0 100%, 0 calc(var(--cut) - 1.2px));
 }
 .frame::after {
@@ -214,6 +216,25 @@ code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospac
   background: linear-gradient(90deg, var(--cyan) 0%, var(--cyan) 60%, transparent);
   clip-path: polygon(0 0, 100% 0, calc(100% - 3px) 100%, 0 100%);
   box-shadow: 0 0 12px var(--cyan);
+}
+/* While the next page loads, a light sweeps along the top of the bar. */
+.topbar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--cyan-hi) 60%, transparent);
+  box-shadow: 0 0 10px var(--cyan);
+  opacity: 0;
+  pointer-events: none;
+}
+.is-loading .topbar::before { opacity: 1; animation: sweep 0.9s ease-in-out infinite; }
+.is-loading { cursor: progress; }
+@keyframes sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
 }
 .topbar-inner {
   width: min(var(--wrap), 100% - 32px);
@@ -549,7 +570,7 @@ span.ball.m-coop { font-size: 12px; }
 .mini > img, .mini-shade {
   clip-path: polygon(calc(var(--cut) - 1.2px) 0, 100% 0, 100% calc(100% - var(--cut) + 1.2px), calc(100% - var(--cut) + 1.2px) 100%, 0 100%, 0 calc(var(--cut) - 1.2px));
 }
-.mini > img { width: 100%; height: 100%; object-fit: cover; }
+.mini > img { width: 100%; height: 100%; object-fit: cover; background: var(--well); }
 .mini-shade { position: absolute; inset: 2px; background: linear-gradient(180deg, rgba(2, 8, 24, 0.1) 0%, rgba(2, 8, 24, 0.25) 40%, rgba(2, 10, 30, 0.94) 100%); }
 .mini-top { position: absolute; top: 8px; left: 10px; right: 10px; display: flex; justify-content: space-between; align-items: center; }
 .mini-body { position: absolute; left: 12px; right: 14px; bottom: 8px; display: flex; flex-direction: column; color: #fff; }
@@ -1275,4 +1296,5 @@ span.ball.m-coop { font-size: 12px; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; }
+  .is-loading .topbar::before { width: 100%; animation: none; opacity: 0.6; }
 }
