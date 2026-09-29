@@ -53,7 +53,7 @@ func TestBallArt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	phoenix, prime2, xx := version(t, "phoenix"), version(t, "prime2"), version(t, "xx")
+	phoenix, phoenix2, prime2, xx := version(t, "phoenix"), version(t, "phoenix2"), version(t, "prime2"), version(t, "xx")
 	for _, tc := range []struct {
 		v     *tracker.Version
 		chart string
@@ -62,6 +62,10 @@ func TestBallArt(t *testing.T) {
 		{phoenix, "S1", "piu/difficulty/Phoenix/s1.png"},
 		{phoenix, "D29", "piu/difficulty/Phoenix/d29.png"},
 		{phoenix, "CoOp5", "piu/difficulty/Phoenix/coop5.png"},
+		{phoenix2, "S26", "piu/difficulty/Phoenix2/s26.png"},
+		{phoenix2, "D29", "piu/difficulty/Phoenix2/d29.png"},
+		{phoenix2, "CoOp2", "piu/difficulty/Phoenix2/coop2.png"},
+		{phoenix2, "DP24", "piu/difficulty/dp24.png"},
 		// Performance charts have the same balls in every mix.
 		{phoenix, "SP12", "piu/difficulty/sp12.png"},
 		{phoenix, "DP28", "piu/difficulty/dp28.png"},

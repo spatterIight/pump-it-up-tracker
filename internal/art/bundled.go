@@ -24,6 +24,8 @@ type Bundle struct {
 	// loose maps names without case or punctuation ("rockthehouse") to the
 	// names they come from.
 	loose map[string][]string
+	// names holds the file of every jacket.
+	names map[string]bool
 }
 
 // Jackets returns the jackets built into the app.
@@ -42,16 +44,20 @@ func LoadBundle(fsys fs.FS) (*Bundle, error) {
 	if err != nil {
 		return nil, err
 	}
-	bundle := &Bundle{fsys: fsys, loose: map[string][]string{}}
+	bundle := &Bundle{fsys: fsys, loose: map[string][]string{}, names: map[string]bool{}}
 	if err := json.Unmarshal(b, &bundle.files); err != nil {
 		return nil, fmt.Errorf("jacket index: %w", err)
 	}
-	for name := range bundle.files {
+	for name, file := range bundle.files {
+		bundle.names[file] = true
 		key := strings.ToLower(alnum(name))
 		bundle.loose[key] = append(bundle.loose[key], name)
 	}
 	return bundle, nil
 }
+
+// has reports whether name is one of the bundle's files.
+func (b *Bundle) has(name string) bool { return b.names[name] }
 
 // Len is the number of jackets in the bundle.
 func (b *Bundle) Len() int { return len(b.files) }

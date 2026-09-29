@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/spatterIight/pump-it-up-tracker/internal/art"
+	"github.com/spatterIight/pump-it-up-tracker/internal/catalog"
 	"github.com/spatterIight/pump-it-up-tracker/internal/tracker"
 )
 
@@ -29,6 +30,9 @@ var staticFS embed.FS
 // Options configure a Server.
 type Options struct {
 	Tracker *tracker.Tracker
+	// Catalog is the chart list the progress pages and chart facts come
+	// from; without one, they only show PUMBILITY.
+	Catalog *catalog.Catalog
 	Art     *art.Resolver
 	// BasePath is the path prefix the UI is served under, such as "/piu".
 	// Empty or "/" serves it at the root.
@@ -87,7 +91,7 @@ func New(opts Options) (*Server, error) {
 	s.assetVersion = hex.EncodeToString(h.Sum(nil))[:10]
 
 	funcs := s.funcs()
-	for _, name := range []string{"home", "song", "activity", "notfound"} {
+	for _, name := range []string{"home", "song", "activity", "progress", "folder", "pumbility", "notfound"} {
 		t, err := template.New("layout.html").Funcs(funcs).ParseFS(templateFS, "templates/layout.html", "templates/partials.html", "templates/"+name+".html")
 		if err != nil {
 			return nil, err
@@ -103,6 +107,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /{$}", s.home)
 	mux.HandleFunc("GET /song/{slug}", s.song)
 	mux.HandleFunc("GET /activity", s.activity)
+	mux.HandleFunc("GET /progress", s.progress)
+	mux.HandleFunc("GET /progress/pumbility", s.pumbility)
+	mux.HandleFunc("GET /progress/{folder}", s.folder)
+	mux.HandleFunc("GET /jacket/{name}", s.jacket)
 	mux.HandleFunc("GET /art/{slug}", s.art)
 	mux.HandleFunc("GET /api/data.json", s.data)
 	mux.HandleFunc("GET /healthz", s.healthz)
@@ -156,6 +164,14 @@ type page struct {
 	Song    *tracker.Song
 	Days    []*tracker.Day
 	Summary summary
+
+	// Pumbility is the headline version's PUMBILITY, nil when it has none,
+	// and PumbilityRecent how much it grew in the last 30 days.
+	Pumbility       *tracker.Pumbility
+	PumbilityRecent float64
+	Progress        *progressView
+	Folder          *folderView
+	Rating          *ratingView
 }
 
 // songCard is a song as the songs list shows it: in one version, the newest
@@ -262,6 +278,9 @@ func (s *Server) home(w http.ResponseWriter, r *http.Request) {
 	p := s.newPage("", "songs")
 	t := s.opts.Tracker
 	p.Stats = t.Stats(p.Now)
+	if p.Pumbility = t.Pumbility(t.Current); p.Pumbility != nil {
+		p.PumbilityRecent = recentGrowth(p.Pumbility, p.Now)
+	}
 	p.Filter = s.filter(r)
 	p.Cards = s.cards(p.Filter)
 	if len(t.Days) > 0 {
@@ -421,6 +440,10 @@ type apiSong struct {
 func (s *Server) data(w http.ResponseWriter, r *http.Request) {
 	t := s.opts.Tracker
 	stats := t.Stats(s.opts.Now())
+	var pumbility *float64
+	if p := t.Pumbility(t.Current); p != nil {
+		pumbility = &p.Total
+	}
 	songs := make([]apiSong, 0, len(t.Songs))
 	for _, song := range t.Songs {
 		as := apiSong{Title: song.Title, Slug: song.Slug, Artist: song.Artist, Art: "placeholder"}
@@ -481,6 +504,8 @@ func (s *Server) data(w http.ResponseWriter, r *http.Request) {
 			"charts":         stats.Charts,
 			"highest_single": stats.HighestSingle,
 			"highest_double": stats.HighestDouble,
+			// PUMBILITY is null for a version that has none.
+			"pumbility": pumbility,
 		},
 		"versions": versions,
 		"art":      s.opts.Art.Status(),

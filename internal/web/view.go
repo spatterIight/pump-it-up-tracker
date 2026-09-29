@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spatterIight/pump-it-up-tracker/internal/catalog"
 	"github.com/spatterIight/pump-it-up-tracker/internal/tracker"
 )
 
@@ -49,7 +50,70 @@ func (s *Server) funcs() template.FuncMap {
 			}
 			return strings.Join(out, " ")
 		},
-		"search":      func(s *tracker.Song) string { return strings.ToLower(s.Title + " " + s.Artist) },
+		"search": func(song *tracker.Song) string { return strings.ToLower(song.Title + " " + s.songArtist(song)) },
+		// songArtist and songBPM are the song's, from its metadata or else
+		// from the chart list.
+		"songArtist": s.songArtist,
+		"songBPM":    s.songBPM,
+		// chartInfo is what the chart list says about a chart, nil when it
+		// does not have it.
+		"chartInfo": func(h *tracker.ChartHistory) *catalog.Chart {
+			return s.opts.Catalog.Mix(h.Version).Lookup(h.Song.Title, h.Chart)
+		},
+		// notesOff is the chart's note count when a play's judgments add up
+		// to another, 0 otherwise.
+		"notesOff": func(p *tracker.Play) int {
+			if p.Judgments == nil || p.Broken {
+				return 0
+			}
+			if n := s.opts.Catalog.Notes(p.Song.Title, p.Version, p.Chart); n != p.Judgments.Notes() {
+				return n
+			}
+			return 0
+		},
+		"ratingChart": renderRatingChart,
+		"progressFilter": func(page string, v *tracker.Version, vs []*tracker.Version) progressFilter {
+			return progressFilter{Page: page, Version: v, Versions: vs}
+		},
+		"percent": func(n, total int) float64 {
+			if total == 0 {
+				return 0
+			}
+			return float64(n) * 100 / float64(total)
+		},
+		// chartOf reads a folder's key ("s17").
+		"chartOf": func(key string) tracker.Chart {
+			c, _ := tracker.ParseChart(key)
+			return c
+		},
+		"rating": formatRating,
+		"whole":  func(f float64) string { return formatInt(int(math.Round(f))) },
+		// hasFolder reports whether a chart's level has a folder page: singles
+		// and doubles.
+		"hasFolder":    func(c tracker.Chart) bool { return c.Mode == tracker.ModeSingle || c.Mode == tracker.ModeDouble },
+		"signedRating": func(f float64) string { return "+" + formatRating(f) },
+		"folderName":   func(c tracker.Chart) string { return c.Mode.Name() + " " + c.Ball() },
+		// progressURL links a progress page: the page itself for "", the
+		// PUMBILITY page for "pumbility", or else a level folder by its
+		// key. The version is left out when it is the one shown anyway.
+		"progressURL": func(page string, v *tracker.Version) string {
+			u := s.base + "/progress"
+			if page != "" {
+				u += "/" + page
+			}
+			if vs := s.progressVersions(); v != nil && len(vs) > 0 && v != vs[0] {
+				u += "?version=" + v.ID
+			}
+			return u
+		},
+		// jacketURL is the built-in jacket of a song not in the score log,
+		// "" when there is none.
+		"jacketURL": func(title string) string {
+			if name, ok := s.opts.Art.BundledJacket(title); ok {
+				return s.base + "/jacket/" + name
+			}
+			return ""
+		},
 		"reverse":     reversePlays,
 		"take":        func(n int, ps []*tracker.Play) []*tracker.Play { return ps[:min(n, len(ps))] },
 		"judgmentBar": judgmentBar,
@@ -146,6 +210,74 @@ func (s *Server) funcs() template.FuncMap {
 		"hardestBalls": hardestBalls,
 		"padEmblem":    padEmblem,
 	}
+}
+
+// progressFilter is what the progress-filter template needs: the page it is
+// on, as progressURL names it, and the versions to switch between.
+type progressFilter struct {
+	Page     string
+	Version  *tracker.Version
+	Versions []*tracker.Version
+}
+
+// formatRating writes a PUMBILITY value the way the game does, to the cent,
+// leaving out cents that are zero: "1,797.5", "176.67".
+func formatRating(f float64) string {
+	cents := int(math.Round(f * 100))
+	s := formatInt(cents / 100)
+	if frac := cents % 100; frac != 0 {
+		if frac < 0 {
+			frac = -frac
+		}
+		s += strings.TrimRight(fmt.Sprintf(".%02d", frac), "0")
+	}
+	return s
+}
+
+// songArtist is the song's artist, from its metadata or else from the chart
+// list.
+func (s *Server) songArtist(song *tracker.Song) string {
+	if song.Artist != "" {
+		return song.Artist
+	}
+	if e := s.listed(song); e != nil {
+		return e.Artist
+	}
+	return ""
+}
+
+// songBPM is the song's BPM, from its metadata or else from the chart list.
+func (s *Server) songBPM(song *tracker.Song) string {
+	if song.BPM != "" {
+		return song.BPM
+	}
+	if e := s.listed(song); e != nil {
+		return e.BPM
+	}
+	return ""
+}
+
+// listed returns a chart of the song in the chart list: one of its charts
+// played, in the newest version played, or else any chart of the song in the
+// newest version with a list.
+func (s *Server) listed(song *tracker.Song) *catalog.Chart {
+	for _, h := range song.Charts {
+		if e := s.opts.Catalog.Mix(h.Version).Lookup(song.Title, h.Chart); e != nil {
+			return e
+		}
+	}
+	vs := s.opts.Tracker.Versions
+	for i := len(vs) - 1; i >= 0; i-- {
+		mix := s.opts.Catalog.Mix(vs[i])
+		if name, ok := mix.Song(song.Title); ok {
+			for _, e := range mix.Charts {
+				if e.Song == name {
+					return e
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func formatInt(n int) string {

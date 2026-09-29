@@ -20,7 +20,7 @@ Besides the UI:
 
 - `/healthz` is used by the container healthcheck.
 - `/api/data.json` is a machine-readable summary of what was loaded:
-  - `stats` are the headline stats of the newest version played, which `stats.version` names, and `versions` counts the plays of each version.
+  - `stats` are the headline stats of the newest version played, which `stats.version` names, and `versions` counts the plays of each version. `stats.pumbility` is its PUMBILITY, `null` for a version that has none.
   - Per song, each chart of each version has its `version` and its `lineage`: the charts linked to it, itself included, oldest version first, each with its version and chart.
   - Each chart also has its clear and fail counts, and every play with its `version`. `score` and `grade` are `null` for a fail with no result, and `grade` is also `null` when none is known.
   - `best` is the chart's personal best, `null` if no play has a score. It carries across links like the song page's, so its `version` and `chart` can name a linked chart.
@@ -36,6 +36,8 @@ The app has 1,080 jackets built in, from [PIU Scores](https://piuscores.arrowecl
 5. **The [PIU Fandom wiki](https://pumpitup.fandom.com):** the lead image of the song's page.
 6. **A generated placeholder** (gradient + title), until something is found.
 
+Level folders on the [Progress](progress.md) page also show the built-in jackets of songs you haven't played, found by title; nothing is downloaded for them.
+
 Art from the internet is downloaded once into the data volume. Songs with no art found are looked up again after a week, or straight away when their `image` changes. Network errors are not remembered, so they are simply retried on the next start. Jacket art is © Andamiro; [`COPYRIGHT.txt`](../internal/art/jackets/COPYRIGHT.txt) says where the built-in jackets come from.
 
 ## Game art
@@ -43,9 +45,9 @@ Art from the internet is downloaded once into the data volume. Songs with no art
 Grades, plates and level balls are shown with the game's own art, © Andamiro, which is built into the app (see [`COPYRIGHT.txt`](../internal/web/static/piu/COPYRIGHT.txt)). It comes from [PIU Scores](https://piuscores.arroweclip.se):
 
 - A stage break shows its grade cracked, as the result screen does.
-- Phoenix charts get Phoenix's level balls. Prime 2 and XX charts, and performance charts in every version, get the balls of XX and older mixes.
+- Phoenix and Phoenix 2 charts get their own version's level balls. Prime 2 and XX charts, and performance charts in every version, get the balls of XX and older mixes.
 - A chart with no ball art, such as S29, gets a drawn ball instead.
 
 ## Container image
 
-The image is a static binary on `distroless/static:nonroot` (about 45 MB, most of it jacket art). It runs with a read-only root filesystem and no capabilities.
+The image is a static binary on `distroless/static:nonroot` (about 50 MB, most of it jacket art). It runs with a read-only root filesystem and no capabilities.

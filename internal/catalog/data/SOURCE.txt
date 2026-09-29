@@ -1,0 +1,15 @@
+Chart list
+==========
+
+phoenix.csv and phoenix2.csv list every chart of Pump It Up Phoenix and
+Phoenix 2, with facts about each: the song's artist and BPM, the step
+artist, the note count, skill tags, and how hard players find the chart for
+its level. They come from PIU Scores (https://piuscores.arroweclip.se), a
+community site whose players' scores the difficulties are worked out from,
+and were exported on 2026-09-29 with:
+
+  https://piuscores.arroweclip.se/Charts/Export.csv?Mix=Phoenix&Columns=ChartId,Song,Artist,StepArtist,Type,Level,SongType,BPM,NoteCount,Badges,PassDifficulty,ScoreDifficulty,ScoringLevel
+  (and Mix=Phoenix2 for phoenix2.csv)
+
+The songs, charts and their names are Andamiro's; this is a personal
+tracker, not affiliated with Andamiro or PIU Scores.

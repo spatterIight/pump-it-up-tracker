@@ -293,6 +293,24 @@ func (r *Resolver) fromBundle(s Song) (Image, bool) {
 	return Image{fsys: b.fsys, path: file, version: "b" + strconv.FormatUint(uint64(h.Sum32()), 36)}, true
 }
 
+// BundledJacket returns the name of the built-in jacket of a song that is
+// not in the score log, found by its title alone, as an art lookup would.
+func (r *Resolver) BundledJacket(title string) (string, bool) {
+	if r == nil || r.opts.Bundle == nil {
+		return "", false
+	}
+	return r.opts.Bundle.byTitle(title)
+}
+
+// OpenBundled opens a built-in jacket by the name BundledJacket returned. The
+// file can also seek (io.Seeker).
+func (r *Resolver) OpenBundled(name string) (fs.File, error) {
+	if r == nil || r.opts.Bundle == nil || !r.opts.Bundle.has(name) {
+		return nil, fs.ErrNotExist
+	}
+	return r.opts.Bundle.fsys.Open(name)
+}
+
 func (r *Resolver) metaPath(slug string) string {
 	return filepath.Join(r.opts.CacheDir, slug+".json")
 }

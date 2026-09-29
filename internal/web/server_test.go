@@ -10,16 +10,27 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/spatterIight/pump-it-up-tracker/internal/art"
+	"github.com/spatterIight/pump-it-up-tracker/internal/catalog"
 	"github.com/spatterIight/pump-it-up-tracker/internal/tracker"
 )
 
+// charts is the chart list built into the app, read once.
+var charts = sync.OnceValue(func() *catalog.Catalog {
+	c, err := catalog.Load()
+	if err != nil {
+		panic(err)
+	}
+	return c
+})
+
 func newTestServer(t *testing.T, basePath string) http.Handler {
 	t.Helper()
-	tr, err := tracker.LoadFile(filepath.Join("..", "..", "sample", "tracker.json"))
+	tr, err := tracker.LoadFileWith(filepath.Join("..", "..", "sample", "tracker.json"), tracker.Options{ChartID: charts().ChartID})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,6 +49,7 @@ func serve(t *testing.T, tr *tracker.Tracker, basePath string) http.Handler {
 	resolver.Start(context.Background(), songs)
 	srv, err := New(Options{
 		Tracker:  tr,
+		Catalog:  charts(),
 		Art:      resolver,
 		BasePath: basePath,
 		Version:  "test",
@@ -177,6 +189,12 @@ func TestChartsAreValidSVG(t *testing.T) {
 	// then one each for misses and perfect rate, × two layouts.
 	if n := countValidSVGs(t, h, "/song/katkoi"); n != 8 {
 		t.Errorf("found %d chart SVGs, want 8", n)
+	}
+	// PUMBILITY's history, in two layouts.
+	for _, path := range []string{"/progress", "/progress/pumbility"} {
+		if n := countValidSVGs(t, h, path); n != 2 {
+			t.Errorf("%s: found %d chart SVGs, want 2", path, n)
+		}
 	}
 }
 

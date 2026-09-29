@@ -27,6 +27,7 @@ import (
 	_ "time/tzdata" // lets TZ work in a distroless image
 
 	"github.com/spatterIight/pump-it-up-tracker/internal/art"
+	"github.com/spatterIight/pump-it-up-tracker/internal/catalog"
 	"github.com/spatterIight/pump-it-up-tracker/internal/tracker"
 	"github.com/spatterIight/pump-it-up-tracker/internal/web"
 )
@@ -110,12 +111,29 @@ func validate(args []string) error {
 	if len(args) > 0 {
 		path = args[0]
 	}
-	t, err := tracker.LoadFile(path)
+	t, charts, err := load(path)
 	if err != nil {
 		return err
 	}
 	fmt.Printf("%s is valid: %s\n", path, summary(t))
+	for _, w := range charts.Check(t) {
+		fmt.Println("warning:", w)
+	}
 	return nil
+}
+
+// load reads the chart list built into the app, then the data file, linking
+// the charts the list says are the same steps in different versions.
+func load(path string) (*tracker.Tracker, *catalog.Catalog, error) {
+	charts, err := catalog.Load()
+	if err != nil {
+		return nil, nil, fmt.Errorf("loading the built-in chart list: %w", err)
+	}
+	t, err := tracker.LoadFileWith(path, tracker.Options{ChartID: charts.ChartID})
+	if err != nil {
+		return nil, nil, err
+	}
+	return t, charts, nil
 }
 
 // summary describes what a data file holds: "56 plays of 40 songs (41
@@ -178,11 +196,14 @@ func serve() error {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: c.logLevel}))
 	slog.SetDefault(logger)
 
-	t, err := tracker.LoadFile(c.dataFile)
+	t, charts, err := load(c.dataFile)
 	if err != nil {
 		return fmt.Errorf("loading %s: %w", c.dataFile, err)
 	}
 	logger.Info("loaded score data", "file", c.dataFile, "plays", len(t.Plays), "songs", len(t.Songs), "version", version)
+	for _, w := range charts.Check(t) {
+		logger.Warn("possible typo in the score data", "problem", w)
+	}
 
 	userAgent := "pump-it-up-tracker/" + version + " (+https://github.com/spatterIight/pump-it-up-tracker)"
 	client := &http.Client{Timeout: 20 * time.Second}
@@ -226,7 +247,7 @@ func serve() error {
 	}
 	resolver.Start(ctx, songs)
 
-	srv, err := web.New(web.Options{Tracker: t, Art: resolver, BasePath: c.basePath, Version: version, Logger: logger})
+	srv, err := web.New(web.Options{Tracker: t, Catalog: charts, Art: resolver, BasePath: c.basePath, Version: version, Logger: logger})
 	if err != nil {
 		return err
 	}

@@ -93,6 +93,30 @@
     filter();
   }
 
+  // ---- Level folder: show all, cleared or not cleared ---------------------------
+
+  function folderFilter() {
+    var list = document.querySelector("[data-folder]");
+    if (!list) return;
+    var rows = list.querySelectorAll(".frow");
+    var chips = document.querySelectorAll(".chip[data-show]");
+    var empty = document.querySelector("[data-empty]");
+    each(chips, function (chip) {
+      chip.addEventListener("click", function () {
+        var show = chip.dataset.show;
+        var visible = 0;
+        each(chips, function (c) {
+          c.setAttribute("aria-pressed", String(c === chip));
+        });
+        each(rows, function (row) {
+          row.hidden = show !== "" && row.dataset.cleared !== show;
+          if (!row.hidden) visible++;
+        });
+        empty.hidden = visible > 0;
+      });
+    });
+  }
+
   // ---- Song page: chart tabs ----------------------------------------------------
 
   // A chart lineage's tab also answers to the keys of its older charts.
@@ -218,6 +242,7 @@
   // enhance sets up a page that has just been loaded or swapped in.
   function enhance() {
     songLibrary();
+    folderFilter();
     chartTabs();
     metricSwitch();
     tooltips();
@@ -262,7 +287,7 @@
     var p = url.pathname;
     if (p !== base && p.indexOf(base + "/") !== 0) return false;
     p = p.slice(base.length);
-    return !/^\/(static|art|api)\//.test(p) && p !== "/healthz";
+    return !/^\/(static|art|jacket|api)\//.test(p) && p !== "/healthz";
   }
 
   // assets lists a page's stylesheets and scripts, which a new release changes.

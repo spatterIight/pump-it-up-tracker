@@ -14,8 +14,12 @@ type Version struct {
 	// Name is how the version is shown ("Prime 2").
 	Name string
 	// Scoring is how the version scores and grades plays. Personal bests
-	// carry across a chart link only between versions that share one.
+	// carry across a chart link only between versions whose scoring systems
+	// put scores on the same scale.
 	Scoring ScoringSystem
+	// Pumbility prices charts for the version's PUMBILITY, nil when the
+	// version has none.
+	Pumbility PumbilityFormula
 
 	// order is the version's place in release order, counted from the oldest.
 	order int
@@ -26,7 +30,8 @@ type Version struct {
 var versions = []Version{
 	{ID: "prime2", Name: "Prime 2", Scoring: Prime2Scoring},
 	{ID: "xx", Name: "XX", Scoring: XXScoring},
-	{ID: "phoenix", Name: "Phoenix", Scoring: PhoenixScoring},
+	{ID: "phoenix", Name: "Phoenix", Scoring: PhoenixScoring, Pumbility: PhoenixPumbility},
+	{ID: "phoenix2", Name: "Phoenix 2", Scoring: Phoenix2Scoring, Pumbility: Phoenix2Pumbility},
 }
 
 // DefaultVersion is the ID of the version of a play that does not name one.
@@ -60,10 +65,13 @@ func newVersionSet(vs []Version) (versionSet, error) {
 		if seen[key] {
 			return nil, fmt.Errorf("game version %q is listed twice", v.ID)
 		}
-		// Records compare scoring systems with ==, which panics on a value
+		// Scoring systems are compared with ==, which panics on a value
 		// holding a slice, map or function.
 		if !reflect.TypeOf(v.Scoring).Comparable() {
 			return nil, fmt.Errorf("game version %q: its scoring system %s cannot be compared with ==; make it a pointer", v.ID, v.Scoring.Name())
+		}
+		if v.Scoring.Scale() == nil {
+			return nil, fmt.Errorf("game version %q: its scoring system %s has no score scale", v.ID, v.Scoring.Name())
 		}
 		seen[key] = true
 		v.order = i

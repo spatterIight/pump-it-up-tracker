@@ -176,7 +176,7 @@ func TestVersionBadgesAndFilter(t *testing.T) {
 	wantAll(t, "Le Grand Bleu card", card(home, "le-grand-bleu"), `<span class="card-ver">`+prime2Badge+`</span>`, `<img class="grade" src="/static/piu/letters/s.png?v=`)
 	vook := card(home, "vook")
 	wantNone(t, "Vook card", vook, `class="ver"`, `title="S7`)
-	wantAll(t, "Vook card", vook, `title="S10 · best 969,192 AAA&#43;"`, `data-plays="5"`)
+	wantAll(t, "Vook card", vook, `title="S10 · best 964,381 AAA&#43;"`, `data-plays="5"`)
 
 	_, filtered := get(t, h, "/?version=prime2")
 	if n := strings.Count(filtered, `<a class="card"`); n != 14 {

@@ -45,6 +45,13 @@
       </span>
       <span class="stat-sub">single · double</span>
     </div>
+    {{with .Pumbility}}{{if .Charts}}
+    <a class="stat stat-link" href="{{progressURL "" .Version}}">
+      <span class="stat-label">PUMBILITY</span>
+      <span class="stat-value">{{whole .Total}}</span>
+      <span class="stat-sub">{{if gt $.PumbilityRecent 0.0}}+{{whole $.PumbilityRecent}} in the last 30 days{{else}}{{len .Pool}} of 50 charts counted{{end}}</span>
+    </a>
+    {{end}}{{end}}
     <div class="stat stat-accent">
       <span class="stat-label">New bests</span>
       <span class="stat-value">{{.Stats.PBsRecent}}</span>
@@ -144,7 +151,7 @@
       </div>
       <div class="card-body">
         <h3 class="card-title">{{.Song.Title}}</h3>
-        {{if .Song.Artist}}<p class="card-artist">{{.Song.Artist}}</p>{{end}}
+        {{with songArtist .Song}}<p class="card-artist">{{.}}</p>{{end}}
         <div class="card-balls">
           {{range .Charts}}<span class="ball-wrap{{if not .Record.Cleared}} is-uncleared{{end}}" title="{{.Chart}} · {{with .Record}}{{if .Cleared}}best {{score .Best.Score}}{{with .Best.Grade}} {{.}}{{end}}{{else}}not cleared, {{plural (len .Plays) "attempt" "attempts"}}{{end}}{{end}}">{{template "ball" .}}</span>{{end}}
         </div>

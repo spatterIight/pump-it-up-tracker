@@ -14,6 +14,7 @@ import "fmt"
 var Prime2Scoring ScoringSystem = &legacyScoring{
 	name:   "Prime 2",
 	grades: []Grade{"SS", "S", "A", "B", "C", "D", "F"},
+	scale:  ScoreScale{Name: "Prime 2"},
 }
 
 // XXScoring scores and grades plays the way Pump It Up XX does. It scores
@@ -23,6 +24,7 @@ var Prime2Scoring ScoringSystem = &legacyScoring{
 var XXScoring ScoringSystem = &legacyScoring{
 	name:   "XX",
 	grades: []Grade{"SSS", "SS", "S", "A", "B", "C", "D", "F"},
+	scale:  ScoreScale{Name: "XX"},
 }
 
 // scoreStep is what scores before Phoenix are rounded down to.
@@ -30,13 +32,17 @@ const scoreStep = 100
 
 // legacyScoring is the scoring of the versions before Phoenix. Scores have
 // no fixed upper limit, since level and grade bonuses take them past
-// 1,000,000, and there are no plates.
+// 1,000,000, and there are no plates. Each version keeps a scale of its own:
+// a score depends on the chart's level, which is often re-rated between
+// versions, so the same steps can score differently in the next one.
 type legacyScoring struct {
 	name   string
 	grades []Grade
+	scale  ScoreScale
 }
 
 func (s *legacyScoring) Name() string                        { return s.name }
+func (s *legacyScoring) Scale() *ScoreScale                  { return &s.scale }
 func (s *legacyScoring) MaxScore() int                       { return 0 }
 func (s *legacyScoring) ComputesScores() bool                { return false }
 func (s *legacyScoring) ComputeScore(Judgments, int) int     { return 0 }

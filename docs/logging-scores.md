@@ -17,7 +17,7 @@ piu_tracker_scores:
     note: "finally"            # optional
 ```
 
-Only `song`, `chart` and `date` are always required. Everything else is optional, as long as there is either a `score` or both `judgments` and `max_combo` to work it out from. Add `broken: true` for a stage break. A play from another version of the game than Phoenix names it with `version` (see [Game versions](game-versions.md)).
+Only `song`, `chart` and `date` are always required. Everything else is optional, as long as there is either a `score` or both `judgments` and `max_combo` to work it out from. Add `broken: true` for a stage break. A play from another version of the game than Phoenix, such as Phoenix 2, names it with `version` (see [Game versions](game-versions.md)).
 
 ## Failed plays
 
@@ -45,8 +45,9 @@ Every entry is checked before it is shown. A deploy with a mistake in it fails a
 - **Grade against score.** A `grade`, if given, must match the Phoenix grade table. Grades are worked out from the score otherwise.
 - **Failed plays.** A `broken: true` play with no score cannot have a `grade`, `plate`, `judgments` or `max_combo`. Without `broken: true`, a play with no score is rejected.
 - **Everything else:** chart notation, dates, plate names, and unknown keys (such as `perfects:`) are rejected with an explanation.
+- **Judgments against the chart's notes.** For a chart of Phoenix or Phoenix 2, the judgments of a play that wasn't a stage break must add up to the chart's note count in the chart list built into the app (see [Progress](progress.md#the-chart-list)). This one is only a warning, since the list can be wrong too. `validate` prints the warnings after checking a file, the app logs them when it starts, and the song page points out the play. Counts that look like placeholders in the list, such as round hundreds, are not checked.
 
-These are Phoenix's checks. Plays from other versions are checked by their own version's rules, and a problem with such a rule names the version ("plate is not used in Prime 2"); see [Game versions](game-versions.md).
+These are Phoenix's checks, which Phoenix 2 shares. Plays from other versions are checked by their own version's rules, and a problem with such a rule names the version ("plate is not used in Prime 2"); see [Game versions](game-versions.md).
 
 > [!IMPORTANT]
 > The cabinet pads numbers with zeros (`031`), and YAML reads numbers with a leading zero as octal, so `great: 031` arrives as 25. Write `great: 31`. The score check catches this when judgments are given.

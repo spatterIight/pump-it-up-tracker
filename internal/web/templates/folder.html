@@ -1,0 +1,36 @@
+{{define "content"}}
+{{with .Folder}}
+<section class="page-head folder-head">
+  <a class="back" href="{{progressURL "" .Version}}"><span aria-hidden="true">←</span> Progress</a>
+  <div class="folder-title">
+    {{template "ball" .Ref}}
+    <div>
+      <p class="eyebrow">{{.Version.Name}} level</p>
+      <h1 class="display">{{folderName .Ref.Chart}}</h1>
+    </div>
+  </div>
+  <p class="lede">{{.Cleared}} of {{plural .Total "chart" "charts"}} cleared ({{pct (percent .Cleared .Total)}}) · easiest to clear first, by how many players on PIU Scores pass each</p>
+  <div class="folder-nav">
+    {{template "progress-filter" (progressFilter .Key .Version .Versions)}}
+    <span class="folder-steps">
+      {{with .Prev}}<a class="chip" href="{{progressURL . $.Folder.Version}}"><span aria-hidden="true">←</span> {{folderName (chartOf .)}}</a>{{end}}
+      {{with .Next}}<a class="chip" href="{{progressURL . $.Folder.Version}}">{{folderName (chartOf .)}} <span aria-hidden="true">→</span></a>{{end}}
+    </span>
+  </div>
+</section>
+
+<section class="section">
+  <div class="toolbar">
+    <div class="chips" role="group" aria-label="Show">
+      <button type="button" class="chip" aria-pressed="true" data-show="">All</button>
+      <button type="button" class="chip" aria-pressed="false" data-show="false">Not cleared</button>
+      <button type="button" class="chip" aria-pressed="false" data-show="true">Cleared</button>
+    </div>
+  </div>
+  <ol class="folder-list" data-folder>
+    {{range .Rows}}{{template "folder-row" .}}{{end}}
+  </ol>
+  <p class="empty-filter" data-empty hidden>No charts to show.</p>
+</section>
+{{end}}
+{{end}}
