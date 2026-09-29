@@ -67,7 +67,11 @@
 
 [hidden] { display: none !important; }
 
-html { -webkit-text-size-adjust: 100%; }
+/* On touch screens, no tap highlight: Chrome paints it as a box over the
+   element's layout box rather than its drawn shape, and can leave it behind on
+   a page that is kept for going back. For the same reason hover styles are
+   only for pointers that hover: a tapped element stays hovered. */
+html { -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
 
 body {
   margin: 0;
@@ -270,8 +274,10 @@ code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospac
   color: var(--text-2);
 }
 .nav a::before { background: transparent; border-color: transparent; }
-.nav a:hover { color: #fff; }
-.nav a:hover::before { border-color: var(--edge-dim); background: rgba(39, 212, 255, 0.07); }
+@media (hover: hover) {
+  .nav a:hover { color: #fff; }
+  .nav a:hover::before { border-color: var(--edge-dim); background: rgba(39, 212, 255, 0.07); }
+}
 .nav a[aria-current="page"] { color: #021330; }
 .nav a[aria-current="page"]::before {
   border-color: var(--cyan-hi);
@@ -541,8 +547,10 @@ span.ball.m-coop { font-size: 12px; }
   color: var(--cyan);
   white-space: nowrap;
 }
-.more:hover { color: #fff; }
-.more:hover::before { border-color: var(--cyan); box-shadow: 0 0 12px rgba(39, 212, 255, 0.4); }
+@media (hover: hover) {
+  .more:hover { color: #fff; }
+  .more:hover::before { border-color: var(--cyan); box-shadow: 0 0 12px rgba(39, 212, 255, 0.4); }
+}
 
 /* Latest session strip: small banners. */
 .strip {
@@ -577,7 +585,9 @@ span.ball.m-coop { font-size: 12px; }
 .mini-title { font-weight: 700; font-style: italic; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9); }
 .mini-score { display: flex; align-items: baseline; gap: 10px; font-weight: 700; font-style: italic; font-size: 19px; font-variant-numeric: tabular-nums; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9); }
 .mini-score .grade { font-size: 20px; }
-.mini:hover { transform: translateY(-3px); }
+@media (hover: hover) {
+  .mini:hover { transform: translateY(-3px); }
+}
 .mini.is-pb { background: linear-gradient(135deg, #fff3b0, #ffc83a 35%, #d9820c 75%, #ffd86a); }
 
 /* Toolbar */
@@ -615,8 +625,10 @@ span.ball.m-coop { font-size: 12px; }
   color: var(--text-2);
   cursor: pointer;
 }
-.chip:hover, .seg-btn:hover { color: #fff; }
-.chip:hover::before, .seg-btn:hover::before { border-color: var(--edge); }
+@media (hover: hover) {
+  .chip:hover, .seg-btn:hover { color: #fff; }
+  .chip:hover::before, .seg-btn:hover::before { border-color: var(--edge); }
+}
 .chip[aria-pressed="true"], .seg-btn[aria-pressed="true"] { color: #fff; }
 .chip[aria-pressed="true"]::before, .seg-btn[aria-pressed="true"]::before {
   border-color: var(--cyan);
@@ -701,10 +713,12 @@ span.ball.m-coop { font-size: 12px; }
 .card-balls .ball { --ball: 28px; font-size: 13px; }
 .ball-wrap.is-uncleared .ball { filter: grayscale(0.75) brightness(0.75); }
 .card-meta { margin-top: auto; margin-bottom: 0; font-size: 11.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-3); }
-.card:hover { transform: translateY(-4px); }
-.card:hover .card-art::before { box-shadow: 0 0 26px 6px rgba(39, 212, 255, 0.55); }
-.card:hover .card-art .frame img { transform: scale(1.05); }
-.card:hover .card-title { background: linear-gradient(90deg, #aef3ff 0%, #27d4ff 50%, #13a2e6 100%); color: #021330; }
+@media (hover: hover) {
+  .card:hover { transform: translateY(-4px); }
+  .card:hover .card-art::before { box-shadow: 0 0 26px 6px rgba(39, 212, 255, 0.55); }
+  .card:hover .card-art .frame img { transform: scale(1.05); }
+  .card:hover .card-title { background: linear-gradient(90deg, #aef3ff 0%, #27d4ff 50%, #13a2e6 100%); color: #021330; }
+}
 .empty-filter { text-align: center; color: var(--text-3); padding: 40px 0; letter-spacing: 0.08em; }
 
 /* ---------- Song page ---------- */
@@ -759,8 +773,10 @@ span.ball.m-coop { font-size: 12px; }
   text-transform: uppercase;
   color: var(--cyan);
 }
-.back:hover { color: #fff; }
-.back:hover::before { border-color: var(--cyan); }
+@media (hover: hover) {
+  .back:hover { color: #fff; }
+  .back:hover::before { border-color: var(--cyan); }
+}
 .song-hero .display { overflow-wrap: anywhere; font-size: clamp(34px, 5.4vw, 62px); }
 .song-sub { margin: 12px 0 0; color: var(--text-2); font-size: 16px; font-weight: 600; letter-spacing: 0.04em; }
 .song-facts { display: flex; flex-wrap: wrap; gap: 10px 12px; margin: 22px 0 0; }
@@ -790,7 +806,9 @@ span.ball.m-coop { font-size: 12px; }
   gap: 12px;
   padding: 8px 28px 8px 16px;
 }
-.chart-tab:hover::before { border-color: var(--edge); }
+@media (hover: hover) {
+  .chart-tab:hover::before { border-color: var(--edge); }
+}
 .chart-tab .ball { --ball: 38px; font-size: 18px; }
 .chart-tab-text { display: flex; flex-direction: column; line-height: 1.2; }
 .chart-tab-name { font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-2); }
@@ -949,7 +967,10 @@ span.ball.m-coop { font-size: 12px; }
 .pt.is-failed .pt-dot { fill: none; stroke: #ff8a98; stroke-width: 2; stroke-linecap: round; }
 .pt.is-failed .pt-halo { fill: var(--miss); }
 .g-empty { fill: var(--text-3); font: italic 700 16px var(--font); letter-spacing: 0.16em; text-transform: uppercase; }
-.pt:hover .pt-halo, .pt:focus-visible .pt-halo, .pt.is-hover .pt-halo { opacity: 0.28; }
+.pt:focus-visible .pt-halo, .pt.is-hover .pt-halo { opacity: 0.28; }
+@media (hover: hover) {
+  .pt:hover .pt-halo { opacity: 0.28; }
+}
 
 .tooltip {
   --cut: 8px;
@@ -1072,7 +1093,9 @@ span.ball.m-coop { font-size: 12px; }
   transition: background 0.15s;
 }
 .play-row { --slant: 12px; }
-.play-row:hover { background: var(--bar-hover); }
+@media (hover: hover) {
+  .play-row:hover { background: var(--bar-hover); }
+}
 .play-thumb { --cut: 8px; width: 104px; padding: 1.5px; }
 .play-thumb img { clip-path: polygon(calc(var(--cut) - 0.9px) 0, 100% 0, 100% calc(100% - var(--cut) + 0.9px), calc(100% - var(--cut) + 0.9px) 100%, 0 100%, 0 calc(var(--cut) - 0.9px)); }
 .play-thumb::after { inset: 1.5px; box-shadow: inset 0 0 8px rgba(39, 212, 255, 0.45); }
@@ -1115,7 +1138,9 @@ span.ball.m-coop { font-size: 12px; }
 }
 .footer > span:first-child { font-weight: 700; font-style: italic; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-2); }
 .footer a { color: var(--text-2); text-decoration: underline; text-decoration-color: var(--edge-dim); }
-.footer a:hover { color: var(--cyan); }
+@media (hover: hover) {
+  .footer a:hover { color: var(--cyan); }
+}
 
 /* ---------- Game versions ---------- */
 
@@ -1146,7 +1171,9 @@ span.ball.m-coop { font-size: 12px; }
 .a-chart .ver { margin: 0; }
 .version-counts { list-style: none; display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 12px 0 0; padding: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; color: var(--text-2); }
 .version-counts a { display: inline-flex; align-items: center; }
-.version-counts a:hover { color: #fff; }
+@media (hover: hover) {
+  .version-counts a:hover { color: #fff; }
+}
 .version-filter { padding: 0; }
 .page-head .version-filter { margin-top: 18px; }
 .chip[aria-current="true"] { color: #fff; }
