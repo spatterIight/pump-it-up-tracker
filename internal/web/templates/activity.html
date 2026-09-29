@@ -28,9 +28,9 @@
           <span class="play-song">{{.Song.Title}}</span>
           <span class="play-sub">{{template "ver-old" .Version}}{{.Chart.Mode.Name}} {{.Chart.Ball}}{{if .HasTime}} · {{clock .Date}}{{end}}</span>
         </span>
-        {{template "ball" .Chart}}
+        {{template "ball" .}}
         <span class="play-score"><span class="play-score-num">{{template "play-score" .}}</span>{{template "delta" .}}</span>
-        <span class="play-grade">{{template "grade" .Grade}}{{template "plate-short" .Plate}}</span>
+        <span class="play-grade">{{template "play-grade" .}}{{template "plate-short" .Plate}}</span>
       </a>
     </li>
     {{end}}

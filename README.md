@@ -61,5 +61,9 @@ go run ./cmd/pump-it-up-tracker validate path/to/tracker.json
 
 - [Logging scores](docs/logging-scores.md): every key, failed plays, typo checks and the data file
 - [Game versions](docs/game-versions.md): Prime 2 and XX plays, and linking a chart across versions
-- [Configuration](docs/configuration.md): environment variables, endpoints and jacket art
+- [Configuration](docs/configuration.md): environment variables, endpoints, jacket art and game art
 - [Development](docs/development.md): tests, adding a game version and releasing
+
+## Copyright
+
+Pump It Up and its art are © Andamiro. The app includes the game's grade, plate and level-ball images and 1,080 song jackets, which come from [PIU Scores](https://piuscores.arroweclip.se); a `COPYRIGHT.txt` beside each set lists them ([game art](internal/web/static/piu/COPYRIGHT.txt), [jackets](internal/art/jackets/COPYRIGHT.txt)). Jackets it downloads for other songs stay on your own server. This is a personal tracker, not affiliated with Andamiro.

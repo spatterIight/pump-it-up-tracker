@@ -40,8 +40,7 @@
     <div class="stat">
       <span class="stat-label">Hardest clears</span>
       <span class="stat-value stat-balls">
-        {{if .Stats.HighestSingle}}<span class="ball ball-lg m-single" title="Single {{.Stats.HighestSingle}}">{{.Stats.HighestSingle}}</span>{{end}}
-        {{if .Stats.HighestDouble}}<span class="ball ball-lg m-double" title="Double {{.Stats.HighestDouble}}">{{.Stats.HighestDouble}}</span>{{end}}
+        {{range hardestBalls .Stats}}{{template "ball" .}}{{end}}
         {{if not (or .Stats.HighestSingle .Stats.HighestDouble)}}—{{end}}
       </span>
       <span class="stat-sub">single · double</span>
@@ -93,10 +92,10 @@
     <a class="mini{{if .IsPB}} is-pb{{end}}{{if .Broken}} is-broken{{end}}" href="{{songURL .Song.Slug}}#{{.History.Lineage.Key}}">
       <img src="{{artURL .Song.Slug}}" alt="" loading="lazy" width="700" height="393">
       <span class="mini-shade"></span>
-      <span class="mini-top"><span class="mini-chart">{{template "ball" .Chart}}{{template "ver-old" .Version}}</span>{{if .IsPB}}<span class="tag tag-pb">{{if .FirstClear}}Clear{{else}}PB{{end}}</span>{{end}}</span>
+      <span class="mini-top"><span class="mini-chart">{{template "ball" .}}{{template "ver-old" .Version}}</span>{{if .IsPB}}<span class="tag tag-pb">{{if .FirstClear}}Clear{{else}}PB{{end}}</span>{{end}}</span>
       <span class="mini-body">
         <span class="mini-title">{{.Song.Title}}</span>
-        <span class="mini-score">{{if .HasScore}}{{score .Score}}{{template "grade" .Grade}}{{else}}<span class="tag tag-fail">Failed</span>{{end}}</span>
+        <span class="mini-score">{{if .HasScore}}{{score .Score}}{{template "play-grade" .}}{{else}}<span class="tag tag-fail">Failed</span>{{end}}</span>
       </span>
     </a>
     {{end}}
@@ -147,7 +146,7 @@
         <h3 class="card-title">{{.Song.Title}}</h3>
         {{if .Song.Artist}}<p class="card-artist">{{.Song.Artist}}</p>{{end}}
         <div class="card-balls">
-          {{range .Charts}}<span class="ball-wrap{{if not .Record.Cleared}} is-uncleared{{end}}" title="{{.Chart}} · {{with .Record}}{{if .Cleared}}best {{score .Best.Score}}{{with .Best.Grade}} {{.}}{{end}}{{else}}not cleared, {{plural (len .Plays) "attempt" "attempts"}}{{end}}{{end}}">{{template "ball" .Chart}}</span>{{end}}
+          {{range .Charts}}<span class="ball-wrap{{if not .Record.Cleared}} is-uncleared{{end}}" title="{{.Chart}} · {{with .Record}}{{if .Cleared}}best {{score .Best.Score}}{{with .Best.Grade}} {{.}}{{end}}{{else}}not cleared, {{plural (len .Plays) "attempt" "attempts"}}{{end}}{{end}}">{{template "ball" .}}</span>{{end}}
         </div>
         <p class="card-meta">{{plural .Plays "play" "plays"}} · {{ago .Last}}</p>
       </div>

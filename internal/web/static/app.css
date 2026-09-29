@@ -58,12 +58,6 @@
   --j-miss: linear-gradient(180deg, #fff0f0 0%, #ffa0a0 38%, #ff3048 68%, #cc1030 100%);
   --j-combo: linear-gradient(180deg, #ffffff 0%, #e4ecf8 45%, #93a4c2 55%, #eef3fb 100%);
 
-  /* Grade letters */
-  --grade-s: linear-gradient(180deg, #fffef2 0%, #fff49a 30%, #ffcf2a 55%, #ff9a2a 78%, #ff5ca8 100%);
-  --grade-a: linear-gradient(180deg, #fff8d2 0%, #ffe066 30%, #ffae1a 58%, #ff7a00 82%, #e85200 100%);
-  --grade-b: linear-gradient(180deg, #ffffff 0%, #dfeaff 35%, #9ab8ff 62%, #5f7ef0 100%);
-  --grade-f: linear-gradient(180deg, #ffecec 0%, #ff9c9c 40%, #ec2a44 75%, #a80c24 100%);
-
   --wrap: 1180px;
   --cut: 14px;
   color-scheme: dark;
@@ -400,13 +394,15 @@ h2 {
 
 /* ---------- Badges ---------- */
 
-.ball {
+/* Level balls: the game's own art (static/piu), or a drawn ball for a chart
+   it has none for. --ball is the height; the art is as wide as it needs. */
+.ball { --ball: 32px; flex: none; height: var(--ball); }
+img.ball { width: auto; max-width: none; }
+span.ball {
   --c: var(--single);
-  flex: none;
   display: inline-grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: var(--ball);
   border-radius: 50%;
   font-weight: 700;
   font-style: italic;
@@ -421,65 +417,29 @@ h2 {
     0 0 0 2px color-mix(in srgb, var(--c) 55%, #fff),
     0 3px 12px color-mix(in srgb, var(--c) 55%, transparent);
 }
-.ball-lg { width: 42px; height: 42px; font-size: 20px; }
 .m-single { --c: var(--single); }
 .m-double { --c: var(--double); }
 .m-coop { --c: var(--coop); }
 .m-sp { --c: var(--sp); }
 .m-dp { --c: var(--dp); }
-.ball.m-coop { font-size: 12px; }
+span.ball.m-coop { font-size: 12px; }
 
-/* Grades: gradient letters with a dark outline and a 3D extrusion, like the result screen. */
-.grade {
-  --o: #1e0b00;
-  --x: #8a3a00;
-  display: inline-block;
-  padding: 0 0.1em 0 0.02em;
-  font-weight: 700;
-  font-style: italic;
-  line-height: 1;
-  letter-spacing: -0.01em;
-  background: var(--grade-b);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  filter:
-    drop-shadow(max(1px, 0.035em) 0 0 var(--o)) drop-shadow(min(-1px, -0.035em) 0 0 var(--o))
-    drop-shadow(0 max(1px, 0.035em) 0 var(--o)) drop-shadow(0 min(-1px, -0.035em) 0 var(--o))
-    drop-shadow(0 max(1px, 0.05em) 0 var(--x));
-}
-.grade, .plate, .jl, .jn i { text-shadow: none; }
-.grade.tier-s { background-image: var(--grade-s); --x: #9a2a3a; }
-.grade.tier-a { background-image: var(--grade-a); }
-.grade.tier-b { --o: #06123a; --x: #22408e; }
-.grade.tier-f { background-image: var(--grade-f); --o: #24000a; --x: #6e0018; }
-
-/* Plates: bold italic chrome lettering. */
-.plate {
-  display: inline-block;
+/* Grades and plates: the game's own art. A grade is as tall as the font size
+   it sits in, so it scales with the text around it. */
+.grade, .plate { display: inline-block; flex: none; width: auto; max-width: none; }
+.grade { height: 1em; }
+.plate { height: 20px; }
+.plate-full { display: inline-flex; align-items: center; gap: 8px; }
+.plate-name {
   font-size: 13px;
   font-weight: 700;
   font-style: italic;
   letter-spacing: 0.06em;
-  line-height: 1.15;
   text-transform: uppercase;
   white-space: nowrap;
-  padding: 0 0.12em;
-  background: var(--pg, linear-gradient(180deg, #ffffff 0%, #e6ecf6 44%, #8e9bb6 54%, #dfe6f2 76%, #ffffff 100%));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  filter: drop-shadow(1px 0 0 #07122e) drop-shadow(-1px 0 0 #07122e) drop-shadow(0 1px 0 #07122e) drop-shadow(0 -1px 0 #07122e) drop-shadow(0 2px 0 rgba(0, 0, 0, 0.5));
+  color: var(--text-2);
 }
-.plate.is-short { font-size: 13px; letter-spacing: 0.04em; }
-.plate-pg { --pg: linear-gradient(90deg, #ff7a8a, #ffd06a, #7dff9e, #6fd0ff, #c58bff); }
-.plate-ug { --pg: linear-gradient(180deg, #ffffff 0%, #c4f6ff 44%, #28b6ea 54%, #b8f1ff 78%, #ffffff 100%); }
-.plate-eg { --pg: linear-gradient(180deg, #ffffff 0%, #ecd6ff 44%, #9955ff 54%, #e2c8ff 78%, #ffffff 100%); }
-.plate-sg { --pg: linear-gradient(180deg, #ffffff 0%, #d6e4ff 44%, #4d7dff 54%, #c8d9ff 78%, #ffffff 100%); }
-.plate-mg { --pg: linear-gradient(180deg, #ffffff 0%, #d4ffe6 44%, #22c46c 54%, #c4f8da 78%, #ffffff 100%); }
-.plate-tg { --pg: linear-gradient(180deg, #ffffff 0%, #eef2fa 44%, #9aa6c2 54%, #e4e9f4 78%, #ffffff 100%); }
-.plate-fg { --pg: linear-gradient(180deg, #fffaf0 0%, #f6dfb8 44%, #b9884e 54%, #f0d6ae 78%, #fffaf0 100%); }
-.plate-rg { --pg: linear-gradient(180deg, #f2f2f6 0%, #c4c6d2 44%, #6d7086 54%, #b8bbc8 78%, #eeeef4 100%); }
+.jl, .jn i { text-shadow: none; }
 
 .tag {
   display: inline-flex;
@@ -586,10 +546,10 @@ h2 {
   clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
   transition: transform 0.2s;
 }
-.mini img, .mini-shade {
+.mini > img, .mini-shade {
   clip-path: polygon(calc(var(--cut) - 1.2px) 0, 100% 0, 100% calc(100% - var(--cut) + 1.2px), calc(100% - var(--cut) + 1.2px) 100%, 0 100%, 0 calc(var(--cut) - 1.2px));
 }
-.mini img { width: 100%; height: 100%; object-fit: cover; }
+.mini > img { width: 100%; height: 100%; object-fit: cover; }
 .mini-shade { position: absolute; inset: 2px; background: linear-gradient(180deg, rgba(2, 8, 24, 0.1) 0%, rgba(2, 8, 24, 0.25) 40%, rgba(2, 10, 30, 0.94) 100%); }
 .mini-top { position: absolute; top: 8px; left: 10px; right: 10px; display: flex; justify-content: space-between; align-items: center; }
 .mini-body { position: absolute; left: 12px; right: 14px; bottom: 8px; display: flex; flex-direction: column; color: #fff; }
@@ -717,7 +677,7 @@ h2 {
 .card-artist, .card-balls, .card-meta { margin-left: 14px; }
 .card-artist { margin-top: 0; margin-bottom: 0; font-size: 13px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .card-balls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; margin-bottom: 8px; }
-.card-balls .ball { width: 28px; height: 28px; font-size: 13px; }
+.card-balls .ball { --ball: 28px; font-size: 13px; }
 .ball-wrap.is-uncleared .ball { filter: grayscale(0.75) brightness(0.75); }
 .card-meta { margin-top: auto; margin-bottom: 0; font-size: 11.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-3); }
 .card:hover { transform: translateY(-4px); }
@@ -810,7 +770,7 @@ h2 {
   padding: 8px 28px 8px 16px;
 }
 .chart-tab:hover::before { border-color: var(--edge); }
-.chart-tab .ball { width: 38px; height: 38px; font-size: 18px; }
+.chart-tab .ball { --ball: 38px; font-size: 18px; }
 .chart-tab-text { display: flex; flex-direction: column; line-height: 1.2; }
 .chart-tab-name { font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-2); }
 .chart-tab-best { display: flex; gap: 10px; align-items: baseline; font-weight: 700; font-style: italic; font-size: 16px; font-variant-numeric: tabular-nums; }
@@ -854,7 +814,7 @@ h2 {
   margin-bottom: 16px;
   border-bottom: 1px solid var(--line-2);
 }
-.result-head .ball { width: 42px; height: 42px; font-size: 20px; }
+.result-head .ball, .stat-balls .ball { --ball: 42px; font-size: 20px; }
 .result-title { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
 .result-chart { font-weight: 700; font-style: italic; font-size: 20px; letter-spacing: 0.06em; text-transform: uppercase; }
 .result-date { margin-left: auto; margin-right: 20px; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; color: var(--text-2); white-space: nowrap; }
@@ -897,8 +857,9 @@ h2 {
 .j-combo { margin-top: 6px; }
 .j-combo .jl { font-size: 17px; }
 .result-side { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; min-width: 0; }
-.result-grade .grade { font-size: clamp(64px, 8vw, 104px); letter-spacing: -0.02em; }
-.result-side .plate { font-size: 20px; letter-spacing: 0.05em; }
+.result-grade .grade { font-size: clamp(64px, 8vw, 104px); }
+.result-side .plate { height: 26px; }
+.result-side .plate-name { font-size: 18px; letter-spacing: 0.05em; color: var(--text); }
 .result-grade .nc { flex-direction: column; gap: 10px; padding: 16px 0 4px; }
 .result-grade .nc-badge { font-size: clamp(20px, 2.4vw, 26px); padding: 9px 28px 9px 26px; clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%); }
 .result-grade .nc-count { font-size: 13px; }
@@ -1260,7 +1221,7 @@ h2 {
   }
   .a-when { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 0 10px; }
   .a-grade { flex-direction: column; align-items: flex-end; gap: 4px; padding-right: 4px; min-width: 0; }
-  .a-grade .plate { white-space: normal; text-align: right; background-size: 100% 1.15em; }
+  .a-grade .plate-name { white-space: normal; text-align: right; }
   .a-extra { justify-content: flex-start; text-align: left; }
   /* Columns as wide as their contents, so "Perfect" is not cut off. */
   .j-nums { grid-template-columns: repeat(5, auto); justify-content: space-between; gap: 4px; }
@@ -1291,8 +1252,7 @@ h2 {
     justify-self: start;
     position: relative;
     z-index: 1;
-    width: 24px;
-    height: 24px;
+    --ball: 24px;
     margin: -8px 0 0 -8px;
     font-size: 11px;
   }
@@ -1300,6 +1260,7 @@ h2 {
   .play-score-num { font-size: 16px; padding: 0 8px; min-width: 0; }
   .play-grade { grid-area: grade; flex-direction: column; align-items: flex-end; gap: 2px; }
   .play-grade .grade { font-size: 22px; }
+  .play-grade .plate { height: 16px; }
   .section-head { flex-wrap: wrap; }
   h2 { font-size: 19px; letter-spacing: 0.05em; white-space: nowrap; }
   .section-head > div { flex: 1 1 auto; }

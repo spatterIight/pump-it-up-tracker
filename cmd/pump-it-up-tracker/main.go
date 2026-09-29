@@ -201,9 +201,14 @@ func serve() error {
 	if fi, err := os.Stat(customDir); err != nil || !fi.IsDir() {
 		customDir = ""
 	}
+	jackets, err := art.Jackets()
+	if err != nil {
+		return fmt.Errorf("loading the bundled jackets: %w", err)
+	}
 	resolver := art.New(art.Options{
 		CacheDir:     c.artCacheDir,
 		CustomDir:    customDir,
+		Bundle:       jackets,
 		FetchEnabled: c.artFetch,
 		Sources:      sources,
 		Client:       client,

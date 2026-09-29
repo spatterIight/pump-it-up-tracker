@@ -1,0 +1,21 @@
+Pump It Up game art
+===================
+
+Every image in this directory is artwork from the Pump It Up arcade games,
+© ANDAMIRO CO., LTD. Andamiro holds the copyright: the images are not the
+work of this project and are not licensed with it. They are included only so
+that this personal score tracker can show results the way the game does.
+
+They were downloaded from PIU Scores (https://piuscores.arroweclip.se), from
+its image host https://piuimages.arroweclip.se, on 2026-09-16. Each file keeps
+its path from that host, so letters/sss.png here is
+https://piuimages.arroweclip.se/letters/sss.png. The only change made to them
+is that their fully transparent margins were trimmed.
+
+  letters/<grade>.png           grades, F to SSS+
+  letters/<grade>_broken.png    the same grade on a stage break
+  plates/<plate>.png            plates, RG to PG
+  difficulty/Phoenix/<chart>.png
+                                Phoenix level balls: singles, doubles and co-op
+  difficulty/<chart>.png        level balls of XX and older mixes, and the
+                                performance (SP, DP) balls of every mix

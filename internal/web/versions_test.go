@@ -173,7 +173,7 @@ func TestVersionBadgesAndFilter(t *testing.T) {
 		return body[i : i+strings.Index(body[i:], "</a>")]
 	}
 	// A song's card shows the newest version it was played in.
-	wantAll(t, "Le Grand Bleu card", card(home, "le-grand-bleu"), `<span class="card-ver">`+prime2Badge+`</span>`, `>S</span>`)
+	wantAll(t, "Le Grand Bleu card", card(home, "le-grand-bleu"), `<span class="card-ver">`+prime2Badge+`</span>`, `<img class="grade" src="/static/piu/letters/s.png?v=`)
 	vook := card(home, "vook")
 	wantNone(t, "Vook card", vook, `class="ver"`, `title="S7`)
 	wantAll(t, "Vook card", vook, `title="S10 · best 969,192 AAA&#43;"`, `data-plays="5"`)

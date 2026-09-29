@@ -12,9 +12,10 @@ import (
 )
 
 func (s *Server) funcs() template.FuncMap {
+	asset := func(p string) string { return s.base + "/static/" + p + "?v=" + s.assetVersion }
 	return template.FuncMap{
 		"url":     func(p string) string { return s.base + p },
-		"asset":   func(p string) string { return s.base + "/static/" + p + "?v=" + s.assetVersion },
+		"asset":   asset,
 		"artURL":  func(slug string) string { return s.base + "/art/" + slug + "?v=" + s.opts.Art.Version(slug) },
 		"songURL": func(slug string) string { return s.base + "/song/" + slug },
 		"score":   formatInt,
@@ -122,8 +123,28 @@ func (s *Server) funcs() template.FuncMap {
 		"gradeClass": func(g tracker.Grade) string {
 			return strings.NewReplacer("+", "p").Replace(strings.ToLower(string(g)))
 		},
-		"plateClass": func(p tracker.Plate) string { return strings.ToLower(string(p)) },
-		"padEmblem":  padEmblem,
+		// gradeArt, plateArt and ballArt link the game's art, "" when there
+		// is none; see gameart.go.
+		"gradeArt": func(g tracker.Grade, broken bool) string {
+			if p := s.gradeArt(g, broken); p != "" {
+				return asset(p)
+			}
+			return ""
+		},
+		"plateArt": func(p tracker.Plate) string {
+			if f := s.plateArt(p); f != "" {
+				return asset(f)
+			}
+			return ""
+		},
+		"ballArt": func(v *tracker.Version, c tracker.Chart) string {
+			if p := s.ballArt(v, c); p != "" {
+				return asset(p)
+			}
+			return ""
+		},
+		"hardestBalls": hardestBalls,
+		"padEmblem":    padEmblem,
 	}
 }
 
