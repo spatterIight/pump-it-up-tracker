@@ -39,7 +39,7 @@ jobs:
 
       - name: Compute tags and labels
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.IMAGE }}
           # A pre-release such as v1.2.0-rc.1 is not tagged latest.
